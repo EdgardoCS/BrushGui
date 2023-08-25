@@ -30,7 +30,7 @@
   </property>
   <property name="windowIcon">
    <iconset>
-    <normaloff>ui/handIcon.png</normaloff>ui/handIcon.png</iconset>
+    <normaloff>../MultiTAC/ui/handIcon.png</normaloff>../MultiTAC/ui/handIcon.png</iconset>
   </property>
   <property name="autoFillBackground">
    <bool>false</bool>
@@ -49,7 +49,7 @@
     <bool>true</bool>
    </property>
    <property name="sizePolicy">
-    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
      <horstretch>0</horstretch>
      <verstretch>0</verstretch>
     </sizepolicy>
@@ -101,6 +101,9 @@
        </property>
        <property name="text">
         <string>Connect</string>
+       </property>
+       <property name="checkable">
+        <bool>false</bool>
        </property>
       </widget>
       <widget class="QLabel" name="WelcomeText">
@@ -185,7 +188,7 @@ Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem
         <enum>Qt::Horizontal</enum>
        </property>
       </widget>
-      <widget class="QWidget" name="layoutWidget">
+      <widget class="QWidget" name="layoutCon">
        <property name="geometry">
         <rect>
          <x>20</x>
@@ -194,9 +197,9 @@ Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem
          <height>31</height>
         </rect>
        </property>
-       <layout class="QHBoxLayout" name="horizontalLayout_2">
+       <layout class="QHBoxLayout" name="ConnectedLayout">
         <item>
-         <widget class="QLabel" name="label_25">
+         <widget class="QLabel" name="label_connected">
           <property name="font">
            <font>
             <pointsize>16</pointsize>
@@ -240,7 +243,7 @@ Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="layoutWidget">
+      <widget class="QWidget" name="layoutPow">
        <property name="geometry">
         <rect>
          <x>20</x>
@@ -249,9 +252,9 @@ Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem
          <height>31</height>
         </rect>
        </property>
-       <layout class="QHBoxLayout" name="horizontalLayout_3">
+       <layout class="QHBoxLayout" name="PoweredLayout">
         <item>
-         <widget class="QLabel" name="label_26">
+         <widget class="QLabel" name="label_powered">
           <property name="font">
            <font>
             <pointsize>16</pointsize>
@@ -285,6 +288,153 @@ Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem
        <enum>QFrame::Sunken</enum>
       </property>
       <layout class="QGridLayout" name="gridLayout">
+       <item row="0" column="1">
+        <widget class="QFrame" name="Subject">
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Sunken</enum>
+         </property>
+         <widget class="QLabel" name="SubjectLabel">
+          <property name="geometry">
+           <rect>
+            <x>10</x>
+            <y>0</y>
+            <width>381</width>
+            <height>31</height>
+           </rect>
+          </property>
+          <property name="font">
+           <font>
+            <pointsize>14</pointsize>
+            <weight>75</weight>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>Subject Information</string>
+          </property>
+         </widget>
+         <widget class="QWidget" name="layoutSubject">
+          <property name="geometry">
+           <rect>
+            <x>11</x>
+            <y>40</y>
+            <width>381</width>
+            <height>181</height>
+           </rect>
+          </property>
+          <layout class="QGridLayout" name="SubjectGrid">
+           <item row="6" column="1">
+            <widget class="QPushButton" name="ResetButton">
+             <property name="font">
+              <font>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>Reset</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QLineEdit" name="ageInput"/>
+           </item>
+           <item row="0" column="1">
+            <widget class="QLineEdit" name="subjectInput"/>
+           </item>
+           <item row="4" column="0">
+            <widget class="QLabel" name="label_handeness">
+             <property name="text">
+              <string>Handedness</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="1">
+            <widget class="QComboBox" name="handInput">
+             <property name="currentText">
+              <string>Left</string>
+             </property>
+             <item>
+              <property name="text">
+               <string>Left</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Right </string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Ambidextrous</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+           <item row="0" column="0">
+            <widget class="QLabel" name="label_subject">
+             <property name="text">
+              <string>Subject</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QComboBox" name="genderInput">
+             <item>
+              <property name="text">
+               <string>Woman</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Man</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Transgender</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Non-binary/non-conforming</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Prefer not to respond</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="label_gender">
+             <property name="text">
+              <string>Gender Identity</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_age_2">
+             <property name="text">
+              <string>Age</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="2">
+            <widget class="QLabel" name="label_age">
+             <property name="text">
+              <string>years old</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+       </item>
        <item row="0" column="0">
         <widget class="QFrame" name="Setup">
          <property name="frameShape">
@@ -293,7 +443,7 @@ Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem
          <property name="frameShadow">
           <enum>QFrame::Sunken</enum>
          </property>
-         <widget class="QLabel" name="label_15">
+         <widget class="QLabel" name="ExperimentLabel">
           <property name="geometry">
            <rect>
             <x>10</x>
@@ -313,73 +463,44 @@ Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem
            <string>Experiment Setup</string>
           </property>
          </widget>
-         <widget class="QWidget" name="layoutWidget">
+         <widget class="QWidget" name="layoutExperiment">
           <property name="geometry">
            <rect>
             <x>10</x>
             <y>40</y>
-            <width>381</width>
-            <height>286</height>
+            <width>391</width>
+            <height>300</height>
            </rect>
           </property>
-          <layout class="QGridLayout" name="gridLayout_3">
-           <item row="10" column="2">
-            <widget class="QPushButton" name="BeginButton">
-             <property name="font">
-              <font>
-               <weight>75</weight>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>Go!</string>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="0" colspan="2">
-            <widget class="QLabel" name="label_16">
-             <property name="text">
-              <string>Distance</string>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="3">
-            <widget class="QLabel" name="label_17">
-             <property name="text">
-              <string>cm</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0" colspan="2">
-            <widget class="QLabel" name="label_7">
-             <property name="text">
-              <string>Body Site</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0" colspan="2">
-            <widget class="QLabel" name="label_8">
-             <property name="text">
-              <string>Velocities</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="3">
-            <widget class="QLabel" name="label_13">
-             <property name="text">
-              <string>cm/s</string>
-             </property>
-            </widget>
+          <layout class="QGridLayout" name="ExperimentGrid">
+           <item row="7" column="2">
+            <widget class="QLineEdit" name="vastimeInput"/>
            </item>
            <item row="6" column="0" colspan="2">
-            <widget class="QLabel" name="label_20">
+            <widget class="QLabel" name="label_velocity_2">
              <property name="text">
               <string>Repetitions per velocity</string>
              </property>
             </widget>
            </item>
+           <item row="8" column="2">
+            <widget class="QLineEdit" name="intertrialIntput"/>
+           </item>
+           <item row="6" column="2">
+            <widget class="QLineEdit" name="repetitionsInput"/>
+           </item>
+           <item row="7" column="0" colspan="2">
+            <widget class="QLabel" name="label_vasTime">
+             <property name="text">
+              <string>Maximum time for VAS response</string>
+             </property>
+            </widget>
+           </item>
            <item row="2" column="2">
-            <widget class="QLineEdit" name="VelocitiesInput">
+            <widget class="QLineEdit" name="velocitiesInput">
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
              <property name="placeholderText">
               <string>1;3;10;...</string>
              </property>
@@ -414,43 +535,15 @@ Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem
              </item>
             </widget>
            </item>
-           <item row="7" column="0" colspan="2">
-            <widget class="QLabel" name="label_9">
+           <item row="2" column="3">
+            <widget class="QLabel" name="label_velocity">
              <property name="text">
-              <string>Maximum time for VAS response</string>
-             </property>
-            </widget>
-           </item>
-           <item row="7" column="3">
-            <widget class="QLabel" name="label_11">
-             <property name="text">
-              <string>s</string>
-             </property>
-            </widget>
-           </item>
-           <item row="8" column="3">
-            <widget class="QLabel" name="label_12">
-             <property name="text">
-              <string>s</string>
-             </property>
-            </widget>
-           </item>
-           <item row="9" column="0" colspan="4">
-            <widget class="QLabel" name="label_14">
-             <property name="text">
-              <string/>
-             </property>
-            </widget>
-           </item>
-           <item row="8" column="0" colspan="2">
-            <widget class="QLabel" name="label_10">
-             <property name="text">
-              <string>InterTrial time interval</string>
+              <string>cm/s</string>
              </property>
             </widget>
            </item>
            <item row="0" column="0" colspan="2">
-            <widget class="QLabel" name="label_6">
+            <widget class="QLabel" name="label_movement">
              <property name="lineWidth">
               <number>1</number>
              </property>
@@ -459,6 +552,16 @@ Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem
              </property>
              <property name="text">
               <string>Brush Movement</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="2">
+            <widget class="QLineEdit" name="distanceInput"/>
+           </item>
+           <item row="8" column="0" colspan="2">
+            <widget class="QLabel" name="label_InterTrial">
+             <property name="text">
+              <string>InterTrial time interval</string>
              </property>
             </widget>
            </item>
@@ -481,175 +584,58 @@ Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem
              </item>
             </widget>
            </item>
-           <item row="11" column="0" colspan="4">
-            <widget class="QLabel" name="label_18">
+           <item row="3" column="3">
+            <widget class="QLabel" name="label_distance">
              <property name="text">
-              <string/>
+              <string>cm</string>
              </property>
             </widget>
            </item>
-           <item row="3" column="2">
-            <widget class="QLineEdit" name="distanceInput"/>
-           </item>
-           <item row="6" column="2">
-            <widget class="QLineEdit" name="repetitionsInput"/>
-           </item>
-           <item row="7" column="2">
-            <widget class="QLineEdit" name="VastimeInput"/>
-           </item>
-           <item row="8" column="2">
-            <widget class="QLineEdit" name="intertrialIntput"/>
-           </item>
-          </layout>
-         </widget>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <widget class="QFrame" name="Subject">
-         <property name="frameShape">
-          <enum>QFrame::StyledPanel</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Sunken</enum>
-         </property>
-         <widget class="QLabel" name="label">
-          <property name="geometry">
-           <rect>
-            <x>10</x>
-            <y>0</y>
-            <width>381</width>
-            <height>31</height>
-           </rect>
-          </property>
-          <property name="font">
-           <font>
-            <pointsize>14</pointsize>
-            <weight>75</weight>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>Subject Information</string>
-          </property>
-         </widget>
-         <widget class="QPushButton" name="ResetButton">
-          <property name="geometry">
-           <rect>
-            <x>320</x>
-            <y>270</y>
-            <width>75</width>
-            <height>23</height>
-           </rect>
-          </property>
-          <property name="font">
-           <font>
-            <weight>75</weight>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>Reset</string>
-          </property>
-         </widget>
-         <widget class="QWidget" name="layoutWidget">
-          <property name="geometry">
-           <rect>
-            <x>11</x>
-            <y>40</y>
-            <width>381</width>
-            <height>111</height>
-           </rect>
-          </property>
-          <layout class="QGridLayout" name="gridLayout_2">
-           <item row="1" column="1">
-            <widget class="QLineEdit" name="ageInput"/>
-           </item>
-           <item row="0" column="1">
-            <widget class="QLineEdit" name="subjectInput"/>
-           </item>
-           <item row="2" column="1">
-            <widget class="QComboBox" name="genderInput">
-             <item>
-              <property name="text">
-               <string>Woman</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>Man</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>Transgender</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>Non-binary/non-conforming</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>Prefer not to respond</string>
-              </property>
-             </item>
-            </widget>
-           </item>
-           <item row="4" column="0">
-            <widget class="QLabel" name="label_5">
+           <item row="7" column="3">
+            <widget class="QLabel" name="label_seconds">
              <property name="text">
-              <string>Handedness</string>
+              <string>s</string>
              </property>
             </widget>
            </item>
-           <item row="4" column="1">
-            <widget class="QComboBox" name="handInput">
-             <property name="currentText">
-              <string>Left</string>
-             </property>
-             <item>
-              <property name="text">
-               <string>Left</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>Right </string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>Ambidextrous</string>
-              </property>
-             </item>
-            </widget>
-           </item>
-           <item row="0" column="0">
-            <widget class="QLabel" name="label_2">
+           <item row="8" column="3">
+            <widget class="QLabel" name="label_seconds2">
              <property name="text">
-              <string>Subject</string>
+              <string>s</string>
              </property>
             </widget>
            </item>
-           <item row="1" column="2">
-            <widget class="QLabel" name="label_19">
+           <item row="3" column="0" colspan="2">
+            <widget class="QLabel" name="label_distance_2">
              <property name="text">
-              <string>years old</string>
+              <string>Distance</string>
              </property>
             </widget>
            </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="label_3">
+           <item row="12" column="1" colspan="2">
+            <widget class="QPushButton" name="BeginButton">
+             <property name="font">
+              <font>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
              <property name="text">
-              <string>Age</string>
+              <string>Go!</string>
              </property>
             </widget>
            </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="label_4">
+           <item row="2" column="0" colspan="2">
+            <widget class="QLabel" name="label_velocities">
              <property name="text">
-              <string>Gender Identity</string>
+              <string>Velocities</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0" colspan="2">
+            <widget class="QLabel" name="label_site">
+             <property name="text">
+              <string>Body Site</string>
              </property>
             </widget>
            </item>
@@ -669,7 +655,7 @@ Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem
           <enum>QTabWidget::Rounded</enum>
          </property>
          <property name="currentIndex">
-          <number>0</number>
+          <number>2</number>
          </property>
          <widget class="QWidget" name="Page1">
           <property name="accessibleName">
@@ -678,30 +664,17 @@ Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem
           <attribute name="title">
            <string>Console Ouput</string>
           </attribute>
-          <widget class="QProgressBar" name="progressBar">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>290</y>
-             <width>781</width>
-             <height>23</height>
-            </rect>
-           </property>
-           <property name="value">
-            <number>0</number>
-           </property>
-           <property name="textVisible">
-            <bool>false</bool>
-           </property>
-          </widget>
           <widget class="QPlainTextEdit" name="ConsoleOutput">
            <property name="geometry">
             <rect>
              <x>10</x>
              <y>10</y>
              <width>781</width>
-             <height>271</height>
+             <height>291</height>
             </rect>
+           </property>
+           <property name="contextMenuPolicy">
+            <enum>Qt::NoContextMenu</enum>
            </property>
            <property name="readOnly">
             <bool>true</bool>
@@ -735,7 +708,7 @@ Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem
             <rect>
              <x>10</x>
              <y>20</y>
-             <width>451</width>
+             <width>781</width>
              <height>121</height>
             </rect>
            </property>
@@ -751,82 +724,6 @@ Selected publications: </string>
             <bool>true</bool>
            </property>
           </widget>
-          <widget class="QLabel" name="label_21">
-           <property name="geometry">
-            <rect>
-             <x>670</x>
-             <y>90</y>
-             <width>121</width>
-             <height>91</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-           <property name="pixmap">
-            <pixmap>thumbnail.svg</pixmap>
-           </property>
-           <property name="scaledContents">
-            <bool>true</bool>
-           </property>
-          </widget>
-          <widget class="QLabel" name="label_22">
-           <property name="geometry">
-            <rect>
-             <x>520</x>
-             <y>90</y>
-             <width>121</width>
-             <height>91</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-           <property name="pixmap">
-            <pixmap>thumbnail.svg</pixmap>
-           </property>
-           <property name="scaledContents">
-            <bool>true</bool>
-           </property>
-          </widget>
-          <widget class="QLabel" name="label_23">
-           <property name="geometry">
-            <rect>
-             <x>520</x>
-             <y>210</y>
-             <width>121</width>
-             <height>91</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-           <property name="pixmap">
-            <pixmap>thumbnail.svg</pixmap>
-           </property>
-           <property name="scaledContents">
-            <bool>true</bool>
-           </property>
-          </widget>
-          <widget class="QLabel" name="label_24">
-           <property name="geometry">
-            <rect>
-             <x>670</x>
-             <y>210</y>
-             <width>121</width>
-             <height>91</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-           <property name="pixmap">
-            <pixmap>thumbnail.svg</pixmap>
-           </property>
-           <property name="scaledContents">
-            <bool>true</bool>
-           </property>
-          </widget>
          </widget>
         </widget>
        </item>
@@ -835,10 +732,12 @@ Selected publications: </string>
     </item>
    </layout>
   </widget>
-  <widget class="QMenuBar" name="menubar">
-   <property name="enabled">
-    <bool>false</bool>
+  <widget class="QStatusBar" name="statusBar">
+   <property name="sizeGripEnabled">
+    <bool>true</bool>
    </property>
+  </widget>
+  <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
     <rect>
      <x>0</x>
@@ -847,10 +746,89 @@ Selected publications: </string>
      <height>21</height>
     </rect>
    </property>
-   <property name="defaultUp">
-    <bool>false</bool>
-   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="contextMenuPolicy">
+     <enum>Qt::ActionsContextMenu</enum>
+    </property>
+    <property name="title">
+     <string>File</string>
+    </property>
+    <property name="toolTipsVisible">
+     <bool>false</bool>
+    </property>
+    <addaction name="loadExperiment"/>
+    <addaction name="saveExperiment"/>
+    <addaction name="separator"/>
+    <addaction name="loadSubject"/>
+    <addaction name="saveSubject"/>
+    <addaction name="separator"/>
+    <addaction name="actionExit"/>
+   </widget>
+   <addaction name="menuFile"/>
   </widget>
+  <action name="loadSubject">
+   <property name="icon">
+    <iconset>
+     <normaloff>../MultiTAC/uploadSubject.png</normaloff>../MultiTAC/uploadSubject.png</iconset>
+   </property>
+   <property name="text">
+    <string>Load Subject</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+S</string>
+   </property>
+  </action>
+  <action name="saveSubject">
+   <property name="icon">
+    <iconset>
+     <normaloff>../MultiTAC/downloadSubject.png</normaloff>../MultiTAC/downloadSubject.png</iconset>
+   </property>
+   <property name="text">
+    <string>Save Subject</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
+  </action>
+  <action name="actionExit">
+   <property name="icon">
+    <iconset>
+     <normaloff>../MultiTAC/img3.png</normaloff>../MultiTAC/img3.png</iconset>
+   </property>
+   <property name="text">
+    <string>Exit</string>
+   </property>
+   <property name="shortcut">
+    <string notr="true">Ctrl+Q</string>
+   </property>
+  </action>
+  <action name="saveExperiment">
+   <property name="icon">
+    <iconset>
+     <normaloff>../MultiTAC/downloadFile.png</normaloff>../MultiTAC/downloadFile.png</iconset>
+   </property>
+   <property name="text">
+    <string>Save Experiment</string>
+   </property>
+  </action>
+  <action name="loadExperiment">
+   <property name="icon">
+    <iconset>
+     <normaloff>../MultiTAC/uploadFile.png</normaloff>../MultiTAC/uploadFile.png</iconset>
+   </property>
+   <property name="text">
+    <string>Load Experiment</string>
+   </property>
+   <property name="iconText">
+    <string>Load Experiment</string>
+   </property>
+   <property name="toolTip">
+    <string>Load Experiment</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::WindowShortcut</enum>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections/>

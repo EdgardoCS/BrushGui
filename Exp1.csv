@@ -1,0 +1,7 @@
+Movement,Circular
+Site,Forearm
+Velocity,1;10;30
+Distance,10
+Repetitions,5
+VasTime,3
+InterTime,20

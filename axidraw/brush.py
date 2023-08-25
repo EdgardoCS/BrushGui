@@ -61,8 +61,7 @@ def openPort(com_port):
     Stop button on GUI now closes serial port.
     """
     trials = 10
-    for _ in range(trials):
-        time.sleep(3)
+    for trial in range(0, trials):
         try:
             serial_port = serial.Serial(com_port, timeout=1.0)
             serial_port.reset_input_buffer()
@@ -72,8 +71,8 @@ def openPort(com_port):
             pwr_state = serial_port.readline()
             value = pwr_state.decode('ascii').split(',')
             if int(value[1]) <= 100:  # check input current level https://evil-mad.github.io/EggBot/ebb.html#QC
-                serial_port = "OFF"
-                return serial_port
+                com_status = False
+                return serial_port, com_status
         except serial.SerialException as se:
             if 'Device or resource busy:' in se.__str__():
                 print('Waiting for the port to be ready ...')
@@ -83,9 +82,11 @@ def openPort(com_port):
         else:
             if str_version and str_version.startswith("EBB".encode('ascii')):
                 print('FW version:', str_version.decode('ascii'))
-                return serial_port
+                com_status = True
+                return serial_port, com_status
             serial_port.close()
-    return None
+            return None
+    # time.sleep(1)
 
 
 def closePort(com_port):
