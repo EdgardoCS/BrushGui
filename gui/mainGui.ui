@@ -340,10 +340,21 @@ Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem
             </widget>
            </item>
            <item row="1" column="1">
-            <widget class="QLineEdit" name="ageInput"/>
+            <widget class="QLineEdit" name="ageInput">
+             <property name="text">
+              <string/>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
            </item>
            <item row="0" column="1">
-            <widget class="QLineEdit" name="subjectInput"/>
+            <widget class="QLineEdit" name="subjectInput">
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
            </item>
            <item row="4" column="0">
             <widget class="QLabel" name="label_handeness">
@@ -354,6 +365,9 @@ Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem
            </item>
            <item row="4" column="1">
             <widget class="QComboBox" name="handInput">
+             <property name="layoutDirection">
+              <enum>Qt::RightToLeft</enum>
+             </property>
              <property name="currentText">
               <string>Left</string>
              </property>
@@ -383,6 +397,9 @@ Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem
            </item>
            <item row="2" column="1">
             <widget class="QComboBox" name="genderInput">
+             <property name="layoutDirection">
+              <enum>Qt::RightToLeft</enum>
+             </property>
              <item>
               <property name="text">
                <string>Woman</string>
@@ -474,7 +491,11 @@ Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem
           </property>
           <layout class="QGridLayout" name="ExperimentGrid">
            <item row="7" column="2">
-            <widget class="QLineEdit" name="vastimeInput"/>
+            <widget class="QLineEdit" name="vastimeInput">
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
            </item>
            <item row="6" column="0" colspan="2">
             <widget class="QLabel" name="label_velocity_2">
@@ -484,10 +505,18 @@ Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem
             </widget>
            </item>
            <item row="8" column="2">
-            <widget class="QLineEdit" name="intertrialIntput"/>
+            <widget class="QLineEdit" name="intertrialIntput">
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
            </item>
            <item row="6" column="2">
-            <widget class="QLineEdit" name="repetitionsInput"/>
+            <widget class="QLineEdit" name="repetitionsInput">
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
            </item>
            <item row="7" column="0" colspan="2">
             <widget class="QLabel" name="label_vasTime">
@@ -508,6 +537,9 @@ Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem
            </item>
            <item row="1" column="2">
             <widget class="QComboBox" name="BodySite">
+             <property name="layoutDirection">
+              <enum>Qt::RightToLeft</enum>
+             </property>
              <item>
               <property name="text">
                <string>Forearm</string>
@@ -556,7 +588,11 @@ Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem
             </widget>
            </item>
            <item row="3" column="2">
-            <widget class="QLineEdit" name="distanceInput"/>
+            <widget class="QLineEdit" name="distanceInput">
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
            </item>
            <item row="8" column="0" colspan="2">
             <widget class="QLabel" name="label_InterTrial">
@@ -567,6 +603,9 @@ Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem
            </item>
            <item row="0" column="2">
             <widget class="QComboBox" name="MovementDirection">
+             <property name="layoutDirection">
+              <enum>Qt::RightToLeft</enum>
+             </property>
              <item>
               <property name="text">
                <string>Linear</string>
@@ -655,7 +694,13 @@ Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem
           <enum>QTabWidget::Rounded</enum>
          </property>
          <property name="currentIndex">
-          <number>2</number>
+          <number>0</number>
+         </property>
+         <property name="tabsClosable">
+          <bool>false</bool>
+         </property>
+         <property name="tabBarAutoHide">
+          <bool>false</bool>
          </property>
          <widget class="QWidget" name="Page1">
           <property name="accessibleName">
@@ -703,26 +748,41 @@ Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem
           <attribute name="title">
            <string>About</string>
           </attribute>
-          <widget class="QLabel" name="AboutText">
+          <widget class="QWidget" name="">
            <property name="geometry">
             <rect>
              <x>10</x>
              <y>20</y>
              <width>781</width>
-             <height>121</height>
+             <height>112</height>
             </rect>
            </property>
-           <property name="text">
-            <string>Created By: Edgardo Silva - Universidad de Valparaíso
+           <layout class="QGridLayout" name="gridLayout_2">
+            <item row="0" column="0">
+             <widget class="QLabel" name="AboutText">
+              <property name="text">
+               <string>Created By: Edgardo Silva - Universidad de Valparaíso
 Contact: edgardo.silva@uv.cl
 
 MultiTAC Project: Edgardo Silva; Grace Whitaker; Alejandro Weinstein; Wael El-Deredy; Francis McGlone
-
-Selected publications: </string>
-           </property>
-           <property name="wordWrap">
-            <bool>true</bool>
-           </property>
+</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="label">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="text">
+               <string>Selected publications: </string>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </widget>
          </widget>
         </widget>
@@ -769,7 +829,7 @@ Selected publications: </string>
   <action name="loadSubject">
    <property name="icon">
     <iconset>
-     <normaloff>../MultiTAC/uploadSubject.png</normaloff>../MultiTAC/uploadSubject.png</iconset>
+     <normaloff>icons/uploadSubject.png</normaloff>icons/uploadSubject.png</iconset>
    </property>
    <property name="text">
     <string>Load Subject</string>
@@ -781,7 +841,7 @@ Selected publications: </string>
   <action name="saveSubject">
    <property name="icon">
     <iconset>
-     <normaloff>../MultiTAC/downloadSubject.png</normaloff>../MultiTAC/downloadSubject.png</iconset>
+     <normaloff>icons/downloadSubject.png</normaloff>icons/downloadSubject.png</iconset>
    </property>
    <property name="text">
     <string>Save Subject</string>
@@ -793,7 +853,7 @@ Selected publications: </string>
   <action name="actionExit">
    <property name="icon">
     <iconset>
-     <normaloff>../MultiTAC/img3.png</normaloff>../MultiTAC/img3.png</iconset>
+     <normaloff>icons/img3.png</normaloff>icons/img3.png</iconset>
    </property>
    <property name="text">
     <string>Exit</string>
@@ -805,7 +865,7 @@ Selected publications: </string>
   <action name="saveExperiment">
    <property name="icon">
     <iconset>
-     <normaloff>../MultiTAC/downloadFile.png</normaloff>../MultiTAC/downloadFile.png</iconset>
+     <normaloff>icons/downloadFile.png</normaloff>icons/downloadFile.png</iconset>
    </property>
    <property name="text">
     <string>Save Experiment</string>
@@ -814,7 +874,7 @@ Selected publications: </string>
   <action name="loadExperiment">
    <property name="icon">
     <iconset>
-     <normaloff>../MultiTAC/uploadFile.png</normaloff>../MultiTAC/uploadFile.png</iconset>
+     <normaloff>icons/uploadFile.png</normaloff>icons/uploadFile.png</iconset>
    </property>
    <property name="text">
     <string>Load Experiment</string>

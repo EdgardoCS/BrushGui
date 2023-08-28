@@ -9,7 +9,7 @@ import time
 import queue
 import threading
 import screeninfo
-from PySide2 import QtWidgets
+# from PySide2 import QtWidgets
 from BrushGui.axidraw import brush
 from pyqtconsole.console import PythonConsole
 import pandas as pd
@@ -21,30 +21,15 @@ from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QMainWindow, QApplication, QInputDialog, QFileDialog
 
 
-class AxiDraw:
-    def __init__(self, q_in, q_out):
+class AxiDraw(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
         self.serial_port = 'COM3'
         self.running = True
-        self.serial_port = None
         self.serial_status = False
         self.running = True
-        self.q_in = q_in
-        self.q_out = q_out
-
-    def connectDevice(self):
-        port = brush.findPort()  # Success!! Axidraw founded in ComPort
-        print(port)
-        if port:
-            self.serial_port, self.serial_status = brush.openPort(port)
-            if self.serial_port:
-                if self.serial_status:
-                    self.q_out.put(self.serial_port.name, self.serial_status)
-                    print(self.serial_port.name)
-                else:
-                    self.q_out.put(self.serial_port.name)
-            else:
-                print('Could not find a port with an AxiDraw connected')
-                self.q_out.put('error_1')
+        # self.q_in = q_in
+        # self.q_out = q_out
 
     def stop(self):
         self.running = False
@@ -53,73 +38,74 @@ class AxiDraw:
 
     def run(self):
         while self.running:
-            messages = ['open_port', 'close_port', 'brush_move', 'stop_move']
-            message = self.q_in.get()
+            continue
 
-            if message == messages[1]:  # close port
-                port = brush.findPort()
-                if port:
-                    self.serial_port = brush.closePort(port)
-                    print('Closing port', port)
+    def connectDevice(self):
+        port = brush.findPort()  # Success!! Axidraw founded in ComPort
+        print(port)
+        if port:
+            self.serial_port, self.serial_status = brush.openPort(port)
+            if self.serial_port:
+                if self.serial_status:
+                    return self.serial_port.name
+                    # self.q_out.put(self.serial_port.name, self.serial_status)
+                    # print(self.serial_port.name)
                 else:
-                    print('Could not find a port with an AxiDraw connected')
-                    self.q_out.put('error_1')
+                    return self.serial_port.name
+                    # self.q_out.put(self.serial_port.name)
+            else:
+                print('Could not find a port with an AxiDraw connected')
+                # self.q_out.put('error_1')
+        else:
+            print('Could not find a port with an AxiDraw connected')
+            # self.q_out.put('error_1')
 
-            if message[:10] == messages[2]:  # brush movement
-                brush.sendEnableMotors(self.serial_port, 2)
-                time.sleep(0.1)
-                trial = eval(message.split('_')[1])
-                length, speed, direction = trial
-                print(f'Brushing trial {trial}')
+    def startDevice(self, data):
+        print(self)
+        print(self.serial_port)
+        print(data)
+        # brush.sendEnableMotors(self.serial_port, 2)
+        # time.sleep(0.1)
+        # print(data)
+        """
+        trial = eval(message.split('_')[1])
+        length, speed, direction = trial
+        print(f'Brushing trial {trial}')
 
-                # linear movement
-                if direction == 'R':
-                    brush.pen_down(self.serial_port)
-                    brush.move_x(self.serial_port, length, speed)
-                    brush.pen_up(self.serial_port)
-                    brush.move_x(self.serial_port, -length, 3)
-                elif direction == 'L':
-                    brush.pen_down(self.serial_port)
-                    brush.move_x(self.serial_port, -length, 3)
-                    brush.pen_up(self.serial_port)
-                    brush.move_x(self.serial_port, length, speed)
+        # linear movement
+        if direction == 'R':
+            brush.pen_down(self.serial_port)
+            brush.move_x(self.serial_port, length, speed)
+            brush.pen_up(self.serial_port)
+            brush.move_x(self.serial_port, -length, 3)
+        elif direction == 'L':
+            brush.pen_down(self.serial_port)
+            brush.move_x(self.serial_port, -length, 3)
+            brush.pen_up(self.serial_port)
+            brush.move_x(self.serial_port, length, speed)
 
-                # circular movement
-                elif direction == 'CW':
-                    brush.pen_down(self.serial_port)
-                    brush.move_circular(self.serial_port, speed, 0.67, 1, direction)
-                    brush.pen_up(self.serial_port)
-                elif direction == 'ACW':
-                    brush.pen_down(self.serial_port)
-                    brush.move_circular(self.serial_port, speed, 0.67, 1, direction)
-                    brush.pen_up(self.serial_port)
-                brush.sendDisableMotors(self.serial_port)
+        # circular movement
+        elif direction == 'CW':
+            brush.pen_down(self.serial_port)
+            brush.move_circular(self.serial_port, speed, 0.67, 1, direction)
+            brush.pen_up(self.serial_port)
+        elif direction == 'ACW':
+            brush.pen_down(self.serial_port)
+            brush.move_circular(self.serial_port, speed, 0.67, 1, direction)
+            brush.pen_up(self.serial_port)
+        brush.sendDisableMotors(self.serial_port)
+        """
 
-                self.q_out.put('Mov done')
+
+axidraw = AxiDraw()
+
+axidraw.daemon = True
+axidraw.start()
 
 
-class subjectFile():
+class MainUI(QMainWindow):
     def __init__(self):
-        self.name = None
-        self.age = None
-        self.gender = None
-        self.hand = None
-
-
-class experimentFile():
-    def __init__(self):
-        self.movement = None
-        self.site = None
-        self.speed = None
-        self.distance = None
-        self.trials = None
-        self.vasTime = None
-        self.interTime = None
-
-
-class MultiTACGui(QMainWindow):
-    def __init__(self):
-        super(MultiTACGui, self).__init__()
+        super(MainUI, self).__init__()
         loadUi("gui/mainGui.ui", self)
 
         self.statusBar.showMessage('Ready')
@@ -128,6 +114,10 @@ class MultiTACGui(QMainWindow):
         self.saveExperiment.triggered.connect(self.saveExperimentAction)
         self.loadSubject.triggered.connect(self.loadSubjectAction)
         self.saveSubject.triggered.connect(self.saveSubjectAction)
+        self.ResetButton.clicked.connect(self.resetSubject)
+        self.BeginButton.clicked.connect(self.startExperiment)
+        self.ConnectButton.clicked.connect(self.connectDevice)
+        self.actionExit.triggered.connect(QtWidgets.QApplication.quit)
 
     def printToConsole(self, text):
         self.ConsoleOutput.appendPlainText('- ' + text)
@@ -141,12 +131,10 @@ class MultiTACGui(QMainWindow):
 
         if filename[0] == "":
             return
-        data = pd.read_csv(filename[0],header=None)
+        data = pd.read_csv(filename[0], header=None)
         self.updateExperiment(data)
 
-    def updateExperiment(self,data):
-        print(data[1])
-
+    def updateExperiment(self, data):
         self.MovementDirection.setCurrentText(data[1][0])
         self.BodySite.setCurrentText(data[1][1])
         self.velocitiesInput.setText(data[1][2])
@@ -157,51 +145,117 @@ class MultiTACGui(QMainWindow):
 
     def saveExperimentAction(self):
         # save a experiment file
-        data = [self.MovementDirection.currentText(), self.distanceInput.displayText()]
+        data = [self.MovementDirection.currentText(),
+                self.BodySite.currentText(),
+                self.velocitiesInput.displayText(),
+                self.distanceInput.displayText(),
+                self.repetitionsInput.displayText(),
+                self.intertrialIntput.displayText(),
+                self.vastimeInput.displayText()]
+
         self.printToConsole('Saving data')
         filename = QFileDialog.getSaveFileName(
             caption="Save Experiment",
-            filter="Comma Separated Values CSV Files (*.csv)"
+            filter="Comma Separated Values CSV Files (*.csv)",
+            initialFilter="csv"
         )
 
-        # self.markerModel.save(str(filename[0]))
+        if filename[0] == "":
+            return
+
+        indexRow = ["Movement", "Site",
+                    "Velocity", "Distance",
+                    "Repetitions", "VasTime",
+                    "InterTime"]
+        dataToCsv = pd.DataFrame(data, index=indexRow)
+        dataToCsv.to_csv(str(filename[0]), header=False)
 
     def loadSubjectAction(self):
-        print('3')
+        # load a subject file
+        filename = QFileDialog.getOpenFileName(self,
+                                               caption="Open Experiment",
+                                               filter="Comma Separated Values CSV Files (*.csv)"
+                                               )
+
+        if filename[0] == "":
+            return
+
+        data = pd.read_csv(filename[0], header=None)
+        self.updateSubject(data)
 
     def saveSubjectAction(self):
-        print('4')
+        # save a subject file
+        data = [self.subjectInput.displayText(),
+                self.ageInput.displayText(),
+                self.genderInput.currentText(),
+                self.handInput.currentText()]
+
+        self.printToConsole('Saving data')
+        filename = QFileDialog.getSaveFileName(
+            caption="Save Experiment",
+            filter="Comma Separated Values CSV Files (*.csv)",
+            initialFilter="csv"
+        )
+
+        if filename[0] == "":
+            return
+
+        indexRow = ["Subject", "Age",
+                    "Gender", "Handeness"]
+        dataToCsv = pd.DataFrame(data, index=indexRow)
+        dataToCsv.to_csv(str(filename[0]), header=False)
+
+    def updateSubject(self, data):
+        self.subjectInput.setText(data[1][0])
+        self.ageInput.setText(data[1][1])
+        self.genderInput.setCurrentText(data[1][2])
+        self.handInput.setCurrentText(data[1][3])
+
+    def resetSubject(self):
+        self.subjectInput.setText("")
+        self.ageInput.setText("")
+        self.genderInput.setCurrentIndex(0)
+        self.handInput.setCurrentIndex(0)
+
+    def connectDevice(self):
+        self.printToConsole('Attempting to connect...')
+        AxiDraw.connectDevice(axidraw)
+
+    def startExperiment(self):
+        self.printToConsole('Starting Experiment')
+        data = self.getExperimentData()
+        AxiDraw.startDevice(axidraw, data)
+
+    def getExperimentData(self):
+        self.printToConsole('Starting Experiment')
+        data = [self.MovementDirection.currentText(),
+                self.BodySite.currentText(),
+                self.velocitiesInput.displayText(),
+                self.distanceInput.displayText(),
+                self.repetitionsInput.displayText(),
+                self.intertrialIntput.displayText(),
+                self.vastimeInput.displayText()]
+        return data
 
         """
-        self.ConnectButton.clicked.connect(self.stablishConnection)
-        self.ResetButton.clicked.connect(self.resetPacient)
-        self.BeginButton.clicked.connect(self.startExperiment)
-
-        def printToConsole(self, text):
-            self.ConsoleOutput.appendPlainText('- ' + text)
-
-        def stablishConnection(self):
-            self.printToConsole('Attempting to connect to device')
-            AxiDraw.connectDevice(self)
-
-        def resetPacient(self):
-            self.printToConsole('reset')
-
-        def startExperiment(self):
-            self.printToConsole('Go')
-
-
-        def exportData(self):
-            print('hi')
-            data = [self.MovementDirection.currentIndex(), self.distanceInput.displayText()]
-            self.printToConsole(data)
+        q_to_ad.put('open_port')
+        answer = q_from_ad.get()
+        if answer not in 'error_3':
+            window['status2'].Update(f'MultiTAC Power ON')
+            Powered = True
+        else:
+            print('Failed to connect: MultiTAC power OFF')
+            window['status2'].Update(f'MultiTAC Power OFF', text_color='DarkRed')
+        if answer not in ('error_1', 'error_2', 'error_3'):
+            window['status'].Update(f'Connected to {answer}', text_color='Blue')
+            window['status2'].Update(f'MultiTAC Power ON', text_color='Blue')
+            # q_to_ad.put('query_power')
+            Connected = True
         """
 
 
 if __name__:
-
     app = QApplication(sys.argv)
-    qt_app = MultiTACGui()
+    qt_app = MainUI()
     qt_app.show()
     app.exec()
-
