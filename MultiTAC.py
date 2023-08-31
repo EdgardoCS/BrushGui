@@ -4,6 +4,7 @@ __email__ = "edgardo.silva@uv.cl"
 
 import os
 import sys
+import traceback
 import random
 import time
 import queue
@@ -20,6 +21,67 @@ from PyQt6.uic import loadUi
 from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import QMainWindow, QApplication, QInputDialog, QFileDialog
+
+
+class WorkerSignals(QObject):
+    """
+    Defines the signals available from a running worker thread.
+    Supported signals are:
+        finished
+            No data
+        error
+            tuple (exctype, value, traceback.format_exc() )
+        result
+            object data returned from processing, anything
+        progress
+            int indicating % progress
+    """
+    finished = pyqtSignal()
+    error = pyqtSignal(tuple)
+    result = pyqtSignal(object)
+    progress = pyqtSignal(int)
+
+
+class Worker(QRunnable):
+    """
+    Worker thread
+    Inherits from QRunnable to handler worker thread setup, signals and wrap-up.
+
+    :param callback: The function callback to run on this worker thread. Supplied args and
+                     kwargs will be passed through to the runner.
+    :type callback: function
+    :param args: Arguments to pass to the callback function
+    :param kwargs: Keywords to pass to the callback function
+
+    """
+
+    def __init__(self, fn, *args, **kwargs):
+        super(Worker, self).__init__()
+        # Store constructor arguments (re-used for processing)
+        self.fn = fn
+        self.args = args
+        self.kwargs = kwargs
+        self.signals = WorkerSignals()
+
+        # Add the callback to our kwargs
+        self.kwargs['progress_callback'] = self.signals.progress
+
+    @pyqtSlot()
+    def run(self):
+        """
+        Initialise the runner function with passed args, kwargs.
+        """
+        # Retrieve args/kwargs here; and fire processing using them
+        try:
+            result = self.fn(*self.args, **self.kwargs)
+        except:
+            traceback.print_exc()
+            exctype, value = sys.exc_info()[:2]
+            self.signals.error.emit((exctype, value, traceback.format_exc()))
+        else:
+            self.signals.result.emit(result)  # Return the result of the processing
+        finally:
+            self.signals.finished.emit()  # Done
 
 
 class AxiDraw(threading.Thread):
@@ -104,6 +166,8 @@ axidraw = AxiDraw(q_to_ad, q_from_ad)
 axidraw.daemon = True
 axidraw.start()
 
+Worker.daemon = True
+
 
 class vasPage(QMainWindow):
     def __init__(self):
@@ -125,6 +189,8 @@ class MainUI(QMainWindow):
         super(MainUI, self).__init__()
         loadUi("gui/mainGui.ui", self)
 
+        self.threadpool = QThreadPool()
+
         self.statusBar.showMessage('Ready')
 
         self.loadExperiment.triggered.connect(self.loadExperimentAction)
@@ -135,9 +201,12 @@ class MainUI(QMainWindow):
         self.BeginButton.clicked.connect(self.startExperiment)
         self.ConnectButton.clicked.connect(self.connectDevice)
         self.actionExit.triggered.connect(QtWidgets.QApplication.quit)
+        self.clearButton.clicked.connect(self.clearAction)
+        self.clearConsole.clicked.connect(self.clearConsoleAction)
 
     def printToConsole(self, text):
         self.ConsoleOutput.appendPlainText('- ' + text)
+        self.ConsoleOutput.ensureCursorVisible()
 
     def loadExperimentAction(self):
         # load a experiment file
@@ -236,12 +305,38 @@ class MainUI(QMainWindow):
         self.genderInput.setCurrentIndex(0)
         self.handInput.setCurrentIndex(0)
 
+    def clearAction(self):
+        self.movementPath.setCurrentIndex(0)
+        self.bodySite.setCurrentIndex(0)
+        self.movementDirection.setCurrentIndex(0)
+        self.velocitiesInput.setText("")
+        self.distanceInput.setText("")
+        self.repetitionsInput.setText("")
+        self.intertrialIntput.setText("")
+        self.vastimeInput.setText("")
+
+    def clearConsoleAction(self):
+        self.ConsoleOutput.clear()
     def connectDevice(self):
         q_to_ad.put('open_port')
         answer = q_from_ad.get()
-        print(answer)
+        if answer == 'COM3':
+            print(answer)
 
-    def startExperiment(self):
+            self.connectedBox.setCheckable(True)
+            self.connectedBox.setChecked(True)
+
+            self.poweredBox.setCheckable(True)
+            self.poweredBox.setChecked(True)
+
+            self.ConnectButton.setEnabled(False)
+
+            self.connectedBox.setEnabled(False)
+            self.poweredBox.setEnabled(False)
+
+
+
+    def execute_brushing(self, progress_callback):
         trialsRnd = []
         data = self.getExperimentData()
 
@@ -252,21 +347,43 @@ class MainUI(QMainWindow):
         interTime = int(data[6])
         VasTime = int(data[7])
 
+        totalTrials = len(trials) * reps
+        trialCount = 1
+
         trials = [eval(i) for i in trials]
         for i in range(0, reps):
             trialsRnd.append(random.sample(trials, len(trials)))
-        """
-        trialsRnd
-        timeCount = len(trials) * reps
-        count = 0
-
         for cycle in trialsRnd:
             for trial in cycle:
-                self.printToConsole('Brushed at ' + str(trial) + ' cm/s')
+                self.printToConsole('Brushing at ' + str(trial) + ' cm/s')
                 q_to_ad.put(['execute order 66', trial, direction, distance])
                 answer = q_from_ad.get()
-                print(answer)
-        """
+                # print(answer)
+                progress_callback.emit(totalTrials-trialCount)
+                trialCount += 1
+                # self.getVas()
+        return 'Done'
+
+    def print_output(self, s):
+        if s:
+            print(s)
+
+    def thread_complete(self):
+        self.printToConsole("Tactile stimulation complete")
+
+    def progress_fn(self, n):
+        self.printToConsole('Trials left: ' + str(n))
+
+    def startExperiment(self):
+
+        worker = Worker(self.execute_brushing)  # Any other args, kwargs are passed to the run function
+        worker.signals.result.connect(self.print_output)
+        worker.signals.finished.connect(self.thread_complete)
+        worker.signals.progress.connect(self.progress_fn)
+
+        # Execute
+        self.threadpool.start(worker)
+
     def getExperimentData(self):
         # self.printToConsole('Starting Experiment')
         data = [self.movementPath.currentText(),

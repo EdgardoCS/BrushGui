@@ -233,7 +233,7 @@ From 0.1 to 20 centimeters per second, MultiTAC can use different probes to stim
            </size>
           </property>
           <property name="checkable">
-           <bool>false</bool>
+           <bool>true</bool>
           </property>
           <property name="tristate">
            <bool>false</bool>
@@ -716,6 +716,13 @@ From 0.1 to 20 centimeters per second, MultiTAC can use different probes to stim
              </item>
             </widget>
            </item>
+           <item row="13" column="0">
+            <widget class="QPushButton" name="clearButton">
+             <property name="text">
+              <string>Clear Exp</string>
+             </property>
+            </widget>
+           </item>
           </layout>
          </widget>
         </widget>
@@ -753,7 +760,7 @@ From 0.1 to 20 centimeters per second, MultiTAC can use different probes to stim
              <x>10</x>
              <y>10</y>
              <width>781</width>
-             <height>291</height>
+             <height>271</height>
             </rect>
            </property>
            <property name="contextMenuPolicy">
@@ -761,6 +768,22 @@ From 0.1 to 20 centimeters per second, MultiTAC can use different probes to stim
            </property>
            <property name="readOnly">
             <bool>true</bool>
+           </property>
+           <property name="plainText">
+            <string/>
+           </property>
+          </widget>
+          <widget class="QPushButton" name="clearConsole">
+           <property name="geometry">
+            <rect>
+             <x>690</x>
+             <y>290</y>
+             <width>101</width>
+             <height>23</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Clear Output</string>
            </property>
           </widget>
          </widget>
@@ -802,7 +825,7 @@ From 0.1 to 20 centimeters per second, MultiTAC can use different probes to stim
                <string>Created By: Edgardo Silva - Universidad de Valparaíso
 Contact: edgardo.silva@uv.cl
 
-MultiTAC Project: Edgardo Silva; Grace Whitaker; Alejandro Weinstein; Wael El-Deredy; Francis McGlone
+MultiTAC Project Team
 </string>
               </property>
               <property name="wordWrap">
