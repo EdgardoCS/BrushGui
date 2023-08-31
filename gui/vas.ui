@@ -7,15 +7,15 @@
     <x>0</x>
     <y>0</y>
     <width>581</width>
-    <height>189</height>
+    <height>190</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Form</string>
+   <string>VAS Input</string>
   </property>
   <property name="windowIcon">
    <iconset>
-    <normaloff>img2.png</normaloff>img2.png</iconset>
+    <normaloff>icons/VASIcon.png</normaloff>icons/VASIcon.png</iconset>
   </property>
   <widget class="QFrame" name="frame">
    <property name="geometry">
@@ -43,7 +43,11 @@
        </widget>
       </item>
       <item>
-       <widget class="QLCDNumber" name="lcdNumber"/>
+       <widget class="QLCDNumber" name="vasCurrent">
+        <property name="intValue" stdset="0">
+         <number>1</number>
+        </property>
+       </widget>
       </item>
      </layout>
     </item>
@@ -62,7 +66,7 @@
        </widget>
       </item>
       <item row="3" column="0" colspan="3">
-       <widget class="QSlider" name="horizontalSlider">
+       <widget class="QSlider" name="vasSlider">
         <property name="minimum">
          <number>-10</number>
         </property>
@@ -141,7 +145,7 @@
      </layout>
     </item>
     <item row="3" column="2">
-     <widget class="QPushButton" name="pushButton">
+     <widget class="QPushButton" name="vasSubmit">
       <property name="text">
        <string>Submit</string>
       </property>

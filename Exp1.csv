@@ -1,0 +1,7 @@
+Movement,Linear
+Site,Forearm
+Velocity,1;3;10
+Distance,10
+Repetitions,3
+VasTime,10
+InterTime,3
