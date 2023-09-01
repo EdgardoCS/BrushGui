@@ -233,7 +233,7 @@ From 0.1 to 20 centimeters per second, MultiTAC can use different probes to stim
            </size>
           </property>
           <property name="checkable">
-           <bool>true</bool>
+           <bool>false</bool>
           </property>
           <property name="tristate">
            <bool>false</bool>
