@@ -12,12 +12,12 @@ import threading
 import screeninfo
 import numpy as np
 import pandas as pd
-from BrushGui.axidraw import brush
+from axidraw import brush
 
-from PyQt6.QtGui import *
 from PyQt6.QtCore import *
 from PyQt6 import QtWidgets
 from PyQt6.uic import loadUi
+from PyQt6.QtGui import QScreen
 from PyQt6.QtWidgets import QMainWindow, QApplication, QInputDialog, QFileDialog, QWidget
 
 
@@ -147,10 +147,10 @@ class AxiDraw(threading.Thread):
                             # return self.serial_port.name
                     else:
                         print('Could not find a port with an AxiDraw connected')
-                        self.q_out.put('OK')
+                        self.q_out.put('not-OK')
                 else:
                     print('Could not find a port with an AxiDraw connected')
-                    self.q_out.put('OK')
+                    self.q_out.put('not-OK')
 
             if msg == 'close_port':
                 port = brush.findPort()
@@ -201,7 +201,6 @@ axidraw.start()
 
 Worker.daemon = True
 
-
 class secondWindow(QMainWindow):
     # VAS UI
     def __init__(self, parent=None):
@@ -213,8 +212,10 @@ class secondWindow(QMainWindow):
 
     def getValues(self):
         # Get values from Slider and print results in console
-        #TODO: Store data and export
+        #TODO: Store data and export (if exists: append to csv)
         print(self.vasSlider.value())
+        # print(q_to_ad.put(['execute order 66', trial, direction, distance])) #EXPORT
+
         self.close()
 
     def updateDisplay(self):
@@ -416,6 +417,7 @@ class MainUI(QMainWindow):
             for trial in cycle:
                 answer = None
                 self.printToConsole('Brushing at ' + str(trial) + ' cm/s')
+                # add from here to csv, combine with vas results?
                 q_to_ad.put(['execute order 66', trial, direction, distance])
                 answer = q_from_ad.get()
                 progress_callback.emit(totalTrials - trialCount)
