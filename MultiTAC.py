@@ -160,7 +160,7 @@ class AxiDraw(threading.Thread):
                     print('Closing port', port)
                     self.serial_port = brush.closePort(port)
 
-            if msg[0] == 'execute order 66':
+            if msg[0] == 'hellofriend.mov':
                 brush.sendEnableMotors(self.serial_port, 2)
                 speed = msg[1]
                 direction = msg[2]
@@ -201,6 +201,7 @@ axidraw.start()
 
 Worker.daemon = True
 
+
 class secondWindow(QMainWindow):
     # VAS UI
     def __init__(self, parent=None):
@@ -212,14 +213,14 @@ class secondWindow(QMainWindow):
 
     def getValues(self):
         # Get values from Slider and print results in console
-        #TODO: Store data and export (if exists: append to csv)
+        # TODO: Store data and export (if exists: append to csv)
         print(self.vasSlider.value())
-        # print(q_to_ad.put(['execute order 66', trial, direction, distance])) #EXPORT
+        # print(q_to_ad.put(['hellofriend.mov', trial, direction, distance])) #EXPORT
 
         self.close()
 
     def updateDisplay(self):
-        #Update digital display as the sliders moves
+        # Update digital display as the sliders moves
         self.vasCurrent.display(self.vasSlider.value())
 
 
@@ -234,7 +235,7 @@ class MainUI(QMainWindow):
 
         self.statusBar.showMessage('Ready')
 
-        #bind buttons to functions
+        # bind buttons to functions
         self.loadExperiment.triggered.connect(self.loadExperimentAction)
         self.saveExperiment.triggered.connect(self.saveExperimentAction)
         self.loadSubject.triggered.connect(self.loadSubjectAction)
@@ -374,9 +375,9 @@ class MainUI(QMainWindow):
     def connectDevice(self):
         q_to_ad.put('open_port')
         answer = q_from_ad.get()
-        if answer == 'COM3':
+        if answer[:3] == 'COM':
             # print(answer)
-            # TODO: read all incoming PORTs
+            # TODO: read all incoming PORTs more elegantly
 
             self.connectedBox.setCheckable(True)
             self.connectedBox.setChecked(True)
@@ -418,7 +419,7 @@ class MainUI(QMainWindow):
                 answer = None
                 self.printToConsole('Brushing at ' + str(trial) + ' cm/s')
                 # add from here to csv, combine with vas results?
-                q_to_ad.put(['execute order 66', trial, direction, distance])
+                q_to_ad.put(['hellofriend.mov', trial, direction, distance])
                 answer = q_from_ad.get()
                 progress_callback.emit(totalTrials - trialCount)
                 trialCount += 1

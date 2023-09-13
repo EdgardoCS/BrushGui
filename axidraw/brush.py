@@ -536,6 +536,106 @@ def move_x(serial_port, x_dest, speed):
                 f_curr_y = f_new_y
 
 
+def doOval(serial_port, theta, speed, radius_x, radius_y):
+    radius_x = 1.0  # Radius along the x-axis
+    radius_y = 5.0
+    # Convert theta into radians
+    delta = math.radians(theta)
+
+    # Calculate the x and y coordinates for the oval shape
+    x_dest = radius_x * math.cos(delta) / speed
+    y_dest = radius_y * math.sin(delta) / speed
+    print('x', x_dest)
+    print('y', y_dest)
+    """
+    """
+
+
+def demoMov(mov):
+    p = findPort()
+    if p is None:
+        print('Could not find a port with an AxiDraw connected')
+        sys.exit(-1)
+
+    print('AxiDraw found at port', p)
+    serial_port = openPort(p)
+    if serial_port is None:
+        print('Could not open the port.')
+        sys.exit(-1)
+
+    resolution = 2
+    # print('Using resolution set to', resolution)
+
+    time.sleep(5)  # for video recording
+
+    print('Start')
+    print('-----------------')
+
+    circularMotion = False
+    linearMotion = True
+
+    if mov == 'circular':
+        circularMotion = True
+        linearMotion = False
+
+    if circularMotion:
+        speed = [5, 10, 2]
+        radius = [2, 4, 1]
+        direction = ['CW', 'ACW']
+
+        for i in range(0, 8):
+            sendEnableMotors(serial_port, resolution)
+            pen_down(serial_port)
+
+            target_speed = random.choice(speed)
+            target_radius = random.choice(radius)
+            target_direction = random.choice(direction)
+            rep = 1
+
+            print('trial', i + 1)
+            print('speed', target_speed)
+            print('radius', target_radius)
+            print('direction', target_direction)
+            print('-----------------')
+
+            move_circular(serial_port, target_speed, target_radius, rep, target_direction)
+
+            pen_up(serial_port)
+            sendDisableMotors(serial_port)
+
+            time.sleep(2)
+
+    elif linearMotion:
+        speed = [5, 10, 15]
+        direction = [5, -5, 10, -10]
+
+        for i in range(0, 8):
+            sendEnableMotors(serial_port, resolution)
+            pen_down(serial_port)
+
+            target_speed = random.choice(speed)
+            target_direction = random.choice(direction)
+            rep = 1
+
+            print('trial', i + 1)
+            print('speed', target_speed)
+            print('direction', target_direction)
+            print('-----------------')
+
+            move_x(serial_port, target_direction, target_speed)
+
+            pen_up(serial_port)
+
+            time.sleep(1)
+            move_x(serial_port, -target_direction, 10)
+
+            sendDisableMotors(serial_port)
+
+            time.sleep(2)
+
+    closePort(p)
+
+
 """ - Circular Motion - Author: Pablo V. """
 
 
@@ -549,14 +649,16 @@ def doCircle(serial_port, theta, speed, radius, direction):
     x_dest = factor * math.cos(delta) / 2.54
     y_dest = factor * math.sin(delta) / 2.54
 
+    print('x', x_dest)
+    print('y', y_dest)
     v_i, v_f = 0, 0
 
-    print_info(f'Brushing to {x_dest} with speed {speed}')
+    # print_info(f'Brushing to {x_dest} with speed {speed}')
 
     f_curr_x, f_curr_y = 0, 0
     if direction == "ACW":
         x_dest = -x_dest
-
+    """
     delta_x_inches = x_dest - f_curr_x
     delta_y_inches = y_dest - f_curr_y
 
@@ -573,6 +675,7 @@ def doCircle(serial_port, theta, speed, radius, direction):
     print_info('Using resolution value of', resolution)
 
     if resolution == 2:
+        StepScaleFactor = 1016.0
         StepScaleFactor = 1016.0
     else:
         StepScaleFactor = 1016.0 * 2  # Value from variable NativeResFactor in axidraw_conf.py
@@ -786,6 +889,7 @@ def doCircle(serial_port, theta, speed, radius, direction):
                     time.sleep(float(move_time - 10) / 1000.0)  # pause before issuing next command
                 f_curr_x = f_new_x  # Update current position
                 f_curr_y = f_new_y
+    """
 
 
 def move_circular(serial_port, speed, radius, rep, direction):
@@ -800,82 +904,7 @@ def move_circular(serial_port, speed, radius, rep, direction):
 
 if __name__ == '__main__':
     Debug_Mode = False
-    p = findPort()
-    if p is None:
-        print('Could not find a port with an AxiDraw connected')
-        sys.exit(-1)
 
-    print('AxiDraw found at port', p)
-    serial_port = openPort(p)
-    if serial_port is None:
-        print('Could not open the port.')
-        sys.exit(-1)
+    demoMov('linear')
 
-    resolution = 2
-    # print('Using resolution set to', resolution)
-
-    time.sleep(5)  # for video recording
-
-    print('Start')
-    print('-----------------')
-
-    circularMotion = False
-    linearMotion = True
-
-    if circularMotion:
-        speed = [5, 10, 2]
-        radius = [2, 4, 1]
-        direction = ['CW', 'ACW']
-
-        for i in range(0, 8):
-            sendEnableMotors(serial_port, resolution)
-            pen_down(serial_port)
-
-            target_speed = random.choice(speed)
-            target_radius = random.choice(radius)
-            target_direction = random.choice(direction)
-            rep = 1
-
-            print('trial', i + 1)
-            print('speed', target_speed)
-            print('radius', target_radius)
-            print('direction', target_direction)
-            print('-----------------')
-
-            move_circular(serial_port, target_speed, target_radius, rep, target_direction)
-
-            pen_up(serial_port)
-            sendDisableMotors(serial_port)
-
-            time.sleep(2)
-
-    elif linearMotion:
-        speed = [5, 10, 15]
-        direction = [5, -5, 10, -10]
-
-        for i in range(0, 8):
-            sendEnableMotors(serial_port, resolution)
-            pen_down(serial_port)
-
-            target_speed = random.choice(speed)
-            target_direction = random.choice(direction)
-            rep = 1
-
-            print('trial', i + 1)
-            print('speed', target_speed)
-            print('direction', target_direction)
-            print('-----------------')
-
-            move_x(serial_port, target_direction, target_speed)
-
-            pen_up(serial_port)
-
-            time.sleep(1)
-            move_x(serial_port, -target_direction, 10)
-
-            sendDisableMotors(serial_port)
-
-            time.sleep(2)
-
-    closePort(p)
     print('We are done')
