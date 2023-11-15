@@ -12,11 +12,22 @@ Debug_Mode = False
 
 
 def distance(x, y):
+    """
+    distance where moving part will move
+    :param x: target destination in x axis
+    :param y: target destination in y axis
+    :return (x^2 + y^2)
+    """
     # Pythagorean theorem
     return math.sqrt(x * x + y * y)
 
 
 def circle_perimeter(radius):
+    """
+    calculates the perimeter of the circumference, given the radius
+    :param radius: radius of target circumference, in cm
+    :return: circumference perimeter (2π * r)
+    """
     # circumference perimeter
     return math.pi * 2 * radius
 
@@ -27,7 +38,10 @@ def print_info(*s):
 
 
 def findPort():
-    # Find a single EiBotBoard connected to a USB port.
+    """
+    Find a single EiBotBoard connected to a USB port.
+    :return: port
+    """
     try:
         from serial.tools.list_ports import comports
     except ImportError:
@@ -55,10 +69,8 @@ def openPort(com_port):
     This routine only opens the port;
     it will need to be closed as well, for example with closePort( com_port ).
     You, who open the port, are responsible for closing it as well.
-
-    """
-    """
-    Stop button on GUI now closes serial port.
+    :param com_port: serial port, EiBotBoard connected
+    :return: serial_port, com_status
     """
     trials = 10
     for trial in range(0, trials):
@@ -90,6 +102,11 @@ def openPort(com_port):
 
 
 def closePort(com_port):
+    """
+    close port after use
+    :param com_port: serial port, EiBotBoard connected
+    :return: None
+    """
     if com_port is not None:
         try:
             serial_port = serial.Serial(com_port, timeout=1.0)
@@ -100,6 +117,12 @@ def closePort(com_port):
 
 
 def query(com_port, cmd):
+    """
+
+    :param com_port: serial port, EiBotBoard connected
+    :param cmd: command encoded (EBB Command Set)
+    :return: response from EiBotBoard
+    """
     if com_port is not None and cmd is not None:
         response = ''
         try:
@@ -120,7 +143,8 @@ def query(com_port, cmd):
                     # get new response to replace null response if necessary
                     unused_response = com_port.readline()
                     n_retry_count += 1
-        except:
+        except Exception as e:
+            print(e)
             print("Error reading serial data.")
         return response
     else:
@@ -128,6 +152,12 @@ def query(com_port, cmd):
 
 
 def command(com_port, cmd):
+    """
+    same as query.
+    :param com_port: serial port, EiBotBoard connected
+    :param cmd: command encoded (EBB Command Set)
+    :return: response from EiBotBoard
+    """
     if com_port is not None and cmd is not None:
         try:
             com_port.write(cmd.encode('ascii'))
@@ -146,12 +176,24 @@ def command(com_port, cmd):
                     print('   Response: {0}'.format(response.strip()))
                 else:
                     print('EBB Serial Timeout after command: {0}'.format(cmd))
-        except:
+        except Exception as e:
+            print(e)
             print('Failed after command: {0}'.format(cmd))
             pass
 
 
 def doLowLevelMove(port_name, ri1, steps1, delta_r1, ri2, steps2, delta_r2):
+    """
+    Execute low level movement from axidraw
+    :param port_name: serial port
+    :param ri1: Rate1. represent step rates for axis 1 and 2, and are added to each axis step
+    :param steps1: Steps1. Each number gives the movement distance — the total number of steps — for the given axis
+    :param delta_r1: Accel1. These values are added to their respective Rate values every 40 μs and control acceleration or deceleration during a move
+    :param ri2: Rate2.
+    :param steps2: Steps2.
+    :param delta_r2: Accel2.
+    :return: None
+    """
     # A "pre-computed" XY movement of the form
     #  "LM,RateTerm1,AxisSteps1,DeltaR1,RateTerm2,AxisSteps2,DeltaR2<CR>"
     # See http://evil-mad.github.io/EggBot/ebb.html#LM for documentation.
@@ -164,11 +206,22 @@ def doLowLevelMove(port_name, ri1, steps1, delta_r1, ri2, steps2, delta_r2):
 
 
 def sendDisableMotors(port_name):
+    """
+    Execute command EM (Enable Motors) and signal 0, disable motors
+    :param port_name: serial port
+    :return: None
+    """
     if port_name is not None:
         command(port_name, 'EM,0,0\r')
 
 
 def sendEnableMotors(port_name, res):
+    """
+    Execute command EM (Enable Motors) and signal 1, enable motors
+    :param port_name: serial port
+    :param res: set global step mode to target resolution (2x, 4x, 8x, 16x)
+    :return: None
+    """
     if res < 0:
         res = 0
     if res > 5:
@@ -184,6 +237,12 @@ def sendEnableMotors(port_name, res):
 
 
 def doTimedPause(port_name, n_pause):
+    """
+    set the time for steps to execute, in miliseconds
+    :param port_name: serial port
+    :param n_pause: integer in the range from 1 to 16777215, giving time in milliseconds.
+    :return: None
+    """
     if port_name is not None:
         while n_pause > 0:
             if n_pause > 750:
@@ -197,28 +256,55 @@ def doTimedPause(port_name, n_pause):
 
 
 def sendPenDown(port_name, pen_delay):
+    """
+    Execute command SP (set pen state), signal 0, lower the pen
+    :param port_name: serial port
+    :param pen_delay: duration (optional) is an integer from 1 to 65535, which gives a delay in milliseconds.
+    :return: None
+    """
     if port_name is not None:
         str_output = 'SP,0,{0}\r'.format(pen_delay)
         command(port_name, str_output)
 
 
 def sendPenUp(port_name, pen_delay):
+    """
+    Execute command SP (set pen state), signal 1, raise the pen
+    :param port_name: serial port
+    :param pen_delay: duration (optional) is an integer from 1 to 65535, which gives a delay in milliseconds.
+    :return: None
+    """
     if port_name is not None:
         str_output = 'SP,1,{0}\r'.format(pen_delay)
         command(port_name, str_output)
 
 
 def doXYMove(port_name, delta_x, delta_y, duration):
-    # Move X/Y axes as: "SM,<move_duration>,<axis1>,<axis2><CR>"
-    # Typically, this is wired up such that axis 1 is the Y axis and axis 2 is
-    # the X axis of motion.
-    # On EggBot, Axis 1 is the "pen" motor, and Axis 2 is the "egg" motor.
+    """
+    Move X/Y axes as: "SM,<move_duration>,<axis1>,<axis2><CR>"
+    Typically, this is wired up such that axis 1 is the Y axis and axis 2 is
+    the X axis of motion.
+    On EggBot, Axis 1 is the "pen" motor, and Axis 2 is the "egg" motor.
+    :param port_name: serial port
+    :param delta_x: AxisSteps1 as integers, in the range from -16777215 to 16777215, giving movement distance in steps.
+    :param delta_y: AxisSteps2 as integers, in the range from -16777215 to 16777215, giving movement distance in steps.
+    :param duration: duration is an integer in the range from 1 to 16777215, giving time in milliseconds.
+    :return: None
+    """
     if port_name is not None:
         str_output = 'SM,{0},{1},{2}\r'.format(duration, delta_y, delta_x)
         command(port_name, str_output)
 
 
 def doXMMove(port_name, delta_x, delta_y, duration):
+    """
+    Stepper Move, for Mixed-axis Geometries
+    :param port_name: serial port
+    :param delta_x: AxisSteps1 as integers, in the range from -16777215 to 16777215, giving movement distance in steps.
+    :param delta_y: AxisSteps2 as integers, in the range from -16777215 to 16777215, giving movement distance in steps.
+    :param duration: duration is an integer in the range from 1 to 16777215, giving time in milliseconds.
+    :return: None
+    """
     if port_name is not None:
         str_output = 'XM,{0},{1},{2}\r'.format(duration, delta_y, delta_x)
         command(port_name, str_output)
@@ -276,6 +362,9 @@ def move_x(serial_port, x_dest, speed):
     """
     Move the pen in the x direction for a given distance and speed.
     Speed and distance in centimeters.
+    :param serial_port: COM PORT
+    :param x_dest: target distance (in cm)
+    :param speed: target speed (in cm/s)
     """
     x_dest /= 2.54
     speed /= 2.54
@@ -537,6 +626,15 @@ def move_x(serial_port, x_dest, speed):
 
 
 def doOval(serial_port, theta, speed, radius_x, radius_y):
+    """
+
+    :param serial_port:
+    :param theta:
+    :param speed:
+    :param radius_x:
+    :param radius_y:
+    :return:
+    """
     radius_x = 1.0  # Radius along the x-axis
     radius_y = 5.0
     # Convert theta into radians
@@ -547,11 +645,14 @@ def doOval(serial_port, theta, speed, radius_x, radius_y):
     y_dest = radius_y * math.sin(delta) / speed
     print('x', x_dest)
     print('y', y_dest)
-    """
-    """
 
 
 def demoMov(mov):
+    """
+
+    :param mov:
+    :return:
+    """
     p = findPort()
     if p is None:
         print('Could not find a port with an AxiDraw connected')
@@ -640,6 +741,15 @@ def demoMov(mov):
 
 
 def doCircle(serial_port, theta, speed, radius, direction):
+    """
+
+    :param serial_port:
+    :param theta:
+    :param speed:
+    :param radius:
+    :param direction:
+    :return:
+    """
     # distance /= 2.54
     speed /= 2.54
 
@@ -893,10 +1003,19 @@ def doCircle(serial_port, theta, speed, radius, direction):
 
 
 def move_circular(serial_port, speed, radius, rep, direction):
+    """
+
+    :param serial_port:
+    :param speed:
+    :param radius:
+    :param rep:
+    :param direction:
+    :return:
+    """
     n = 0
-    while (n < rep):
+    while n < rep:
         k = 0
-        while (k < 360):
+        while k < 360:
             doCircle(serial_port, k, speed, radius, direction)
             k += 1
         n += 1
