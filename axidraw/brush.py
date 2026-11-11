@@ -659,7 +659,8 @@ def demoMov(mov):
         sys.exit(-1)
 
     print('AxiDraw found at port', p)
-    serial_port = openPort(p)
+    serial_port, com_status = openPort(p)
+
     if serial_port is None:
         print('Could not open the port.')
         sys.exit(-1)
@@ -667,7 +668,7 @@ def demoMov(mov):
     resolution = 2
     # print('Using resolution set to', resolution)
 
-    time.sleep(5)  # for video recording
+    time.sleep(3)  # for video recording
 
     print('Start')
     print('-----------------')
