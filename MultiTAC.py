@@ -160,6 +160,25 @@ class AxiDraw(threading.Thread):
                     print('Closing port', port)
                     self.serial_port = brush.closePort(port)
 
+            if msg == "penUp":
+                brush.pen_up(self.serial_port)
+
+            if msg == "penDown":
+                brush.pen_down(self.serial_port)
+
+            if msg == "moveLeft":
+                brush.move_x(self.serial_port, 2, 5)
+            if msg == "moveRight":
+                brush.move_x(self.serial_port, -2, 5)
+
+            if msg == "moveForward":
+                brush.move_y(self.serial_port, 2, 5)
+            if msg == "moveBackward":
+                brush.move_y(self.serial_port, -2, 5)
+
+            if msg == "demoMov":
+                brush.demoMov(self.serial_port)
+
             if msg[0] == 'hellofriend.mov':
                 brush.sendEnableMotors(self.serial_port, 2)
                 speed = msg[1]
@@ -247,6 +266,16 @@ class MainUI(QMainWindow):
         self.clearButton.clicked.connect(self.clearAction)
         self.clearConsole.clicked.connect(self.clearConsoleAction)
 
+        self.demoButton.clicked.connect(self.executeDemo)
+
+        # manual control buttons
+        self.penUpBtn.clicked.connect(self.manualPenUp)
+        self.penDownBtn.clicked.connect(self.manualPenDown)
+        self.moveLeftBtn.clicked.connect(self.manualLeft)
+        self.moveRightBtn.clicked.connect(self.manualRight)
+        self.moveFwBtn.clicked.connect(self.manualForward)
+        self.moveBwBtn.clicked.connect(self.manualBackward)
+
     def printToConsole(self, text):
         """
         Print functions output into UI console (PlainText)
@@ -256,6 +285,10 @@ class MainUI(QMainWindow):
 
         self.ConsoleOutput.appendPlainText('- ' + text)
         self.ConsoleOutput.ensureCursorVisible()
+
+    def printToConsole2(self, text):
+        self.ConsoleOutput2.appendPlainText('- ' + text)
+        self.ConsoleOutput2.ensureCursorVisible()
 
     def loadExperimentAction(self):
         # load a experiment file
@@ -477,6 +510,34 @@ class MainUI(QMainWindow):
                 self.intertrialIntput.displayText(),
                 self.vastimeInput.displayText()]
         return data
+
+    def manualPenUp(self):
+        q_to_ad.put('penUp')
+        self.printToConsole2("Instruction: Pen Up")
+
+    def manualPenDown(self):
+        q_to_ad.put('penDown')
+        self.printToConsole2("Instruction: Pen Down")
+
+    def manualLeft(self):
+        q_to_ad.put('moveLeft')
+        self.printToConsole2("Instruction: Move 2cm Left")
+
+    def manualRight(self):
+        q_to_ad.put('moveRight')
+        self.printToConsole2("Instruction: Move 2cm Right")
+
+    def manualForward(self):
+        q_to_ad.put('moveForward')
+        self.printToConsole2("Instruction: Move 2cm Forward")
+
+    def manualBackward(self):
+        q_to_ad.put('moveBackward')
+        self.printToConsole2("Instruction: Move 2cm Backward")
+
+    def executeDemo(self):
+        q_to_ad.put('demoMov')
+        self.printToConsole2("Instruction: Execute Demo!")
 
 
 if __name__:

@@ -36,10 +36,10 @@
    <bool>false</bool>
   </property>
   <property name="toolButtonStyle">
-   <enum>Qt::ToolButtonIconOnly</enum>
+   <enum>Qt::ToolButtonStyle::ToolButtonIconOnly</enum>
   </property>
   <property name="tabShape">
-   <enum>QTabWidget::Rounded</enum>
+   <enum>QTabWidget::TabShape::Rounded</enum>
   </property>
   <property name="unifiedTitleAndToolBarOnMac">
    <bool>false</bool>
@@ -76,10 +76,10 @@
        </size>
       </property>
       <property name="frameShape">
-       <enum>QFrame::StyledPanel</enum>
+       <enum>QFrame::Shape::StyledPanel</enum>
       </property>
       <property name="frameShadow">
-       <enum>QFrame::Sunken</enum>
+       <enum>QFrame::Shadow::Sunken</enum>
       </property>
       <property name="lineWidth">
        <number>1</number>
@@ -95,7 +95,6 @@
        </property>
        <property name="font">
         <font>
-         <weight>75</weight>
          <bold>true</bold>
         </font>
        </property>
@@ -118,7 +117,6 @@
        <property name="font">
         <font>
          <pointsize>16</pointsize>
-         <weight>75</weight>
          <bold>true</bold>
         </font>
        </property>
@@ -126,7 +124,7 @@
         <string>Welcome to MultiTAC User Interface</string>
        </property>
        <property name="alignment">
-        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+        <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
        </property>
        <property name="wordWrap">
         <bool>true</bool>
@@ -148,7 +146,7 @@ From 0.1 to 20 centimeters per second, MultiTAC can use different probes to stim
 </string>
        </property>
        <property name="alignment">
-        <set>Qt::AlignJustify|Qt::AlignVCenter</set>
+        <set>Qt::AlignmentFlag::AlignJustify|Qt::AlignmentFlag::AlignVCenter</set>
        </property>
        <property name="wordWrap">
         <bool>true</bool>
@@ -166,7 +164,6 @@ From 0.1 to 20 centimeters per second, MultiTAC can use different probes to stim
        <property name="font">
         <font>
          <pointsize>14</pointsize>
-         <weight>75</weight>
          <bold>true</bold>
         </font>
        </property>
@@ -184,7 +181,7 @@ From 0.1 to 20 centimeters per second, MultiTAC can use different probes to stim
         </rect>
        </property>
        <property name="orientation">
-        <enum>Qt::Horizontal</enum>
+        <enum>Qt::Orientation::Horizontal</enum>
        </property>
       </widget>
       <widget class="QWidget" name="layoutCon">
@@ -215,10 +212,10 @@ From 0.1 to 20 centimeters per second, MultiTAC can use different probes to stim
            <bool>true</bool>
           </property>
           <property name="focusPolicy">
-           <enum>Qt::StrongFocus</enum>
+           <enum>Qt::FocusPolicy::StrongFocus</enum>
           </property>
           <property name="contextMenuPolicy">
-           <enum>Qt::DefaultContextMenu</enum>
+           <enum>Qt::ContextMenuPolicy::DefaultContextMenu</enum>
           </property>
           <property name="acceptDrops">
            <bool>false</bool>
@@ -281,19 +278,19 @@ From 0.1 to 20 centimeters per second, MultiTAC can use different probes to stim
     <item>
      <widget class="QFrame" name="Experiment">
       <property name="frameShape">
-       <enum>QFrame::StyledPanel</enum>
+       <enum>QFrame::Shape::StyledPanel</enum>
       </property>
       <property name="frameShadow">
-       <enum>QFrame::Sunken</enum>
+       <enum>QFrame::Shadow::Sunken</enum>
       </property>
       <layout class="QGridLayout" name="gridLayout">
        <item row="0" column="1">
         <widget class="QFrame" name="Subject">
          <property name="frameShape">
-          <enum>QFrame::StyledPanel</enum>
+          <enum>QFrame::Shape::StyledPanel</enum>
          </property>
          <property name="frameShadow">
-          <enum>QFrame::Sunken</enum>
+          <enum>QFrame::Shadow::Sunken</enum>
          </property>
          <widget class="QLabel" name="SubjectLabel">
           <property name="geometry">
@@ -307,7 +304,6 @@ From 0.1 to 20 centimeters per second, MultiTAC can use different probes to stim
           <property name="font">
            <font>
             <pointsize>14</pointsize>
-            <weight>75</weight>
             <bold>true</bold>
            </font>
           </property>
@@ -321,37 +317,14 @@ From 0.1 to 20 centimeters per second, MultiTAC can use different probes to stim
             <x>11</x>
             <y>40</y>
             <width>381</width>
-            <height>141</height>
+            <height>160</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="SubjectGrid">
-           <item row="6" column="1">
-            <widget class="QPushButton" name="ResetButton">
-             <property name="font">
-              <font>
-               <weight>75</weight>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>Reset</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="QLineEdit" name="ageInput">
-             <property name="text">
-              <string/>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
            <item row="0" column="1">
             <widget class="QLineEdit" name="subjectInput">
              <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
              </property>
             </widget>
            </item>
@@ -362,31 +335,6 @@ From 0.1 to 20 centimeters per second, MultiTAC can use different probes to stim
              </property>
             </widget>
            </item>
-           <item row="4" column="1">
-            <widget class="QComboBox" name="handInput">
-             <property name="layoutDirection">
-              <enum>Qt::RightToLeft</enum>
-             </property>
-             <property name="currentText">
-              <string>Left</string>
-             </property>
-             <item>
-              <property name="text">
-               <string>Left</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>Right </string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>Ambidextrous</string>
-              </property>
-             </item>
-            </widget>
-           </item>
            <item row="0" column="0">
             <widget class="QLabel" name="label_subject">
              <property name="text">
@@ -394,10 +342,20 @@ From 0.1 to 20 centimeters per second, MultiTAC can use different probes to stim
              </property>
             </widget>
            </item>
+           <item row="1" column="1">
+            <widget class="QLineEdit" name="ageInput">
+             <property name="text">
+              <string/>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
            <item row="2" column="1">
             <widget class="QComboBox" name="genderInput">
              <property name="layoutDirection">
-              <enum>Qt::RightToLeft</enum>
+              <enum>Qt::LayoutDirection::RightToLeft</enum>
              </property>
              <item>
               <property name="text">
@@ -424,6 +382,43 @@ From 0.1 to 20 centimeters per second, MultiTAC can use different probes to stim
                <string>Prefer not to respond</string>
               </property>
              </item>
+            </widget>
+           </item>
+           <item row="4" column="1">
+            <widget class="QComboBox" name="handInput">
+             <property name="layoutDirection">
+              <enum>Qt::LayoutDirection::RightToLeft</enum>
+             </property>
+             <property name="currentText">
+              <string>Left</string>
+             </property>
+             <item>
+              <property name="text">
+               <string>Left</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Right </string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Ambidextrous</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+           <item row="6" column="1">
+            <widget class="QPushButton" name="ResetButton">
+             <property name="font">
+              <font>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>Reset</string>
+             </property>
             </widget>
            </item>
            <item row="2" column="0">
@@ -454,10 +449,10 @@ From 0.1 to 20 centimeters per second, MultiTAC can use different probes to stim
        <item row="0" column="0">
         <widget class="QFrame" name="Setup">
          <property name="frameShape">
-          <enum>QFrame::StyledPanel</enum>
+          <enum>QFrame::Shape::StyledPanel</enum>
          </property>
          <property name="frameShadow">
-          <enum>QFrame::Sunken</enum>
+          <enum>QFrame::Shadow::Sunken</enum>
          </property>
          <widget class="QLabel" name="ExperimentLabel">
           <property name="geometry">
@@ -471,7 +466,6 @@ From 0.1 to 20 centimeters per second, MultiTAC can use different probes to stim
           <property name="font">
            <font>
             <pointsize>14</pointsize>
-            <weight>75</weight>
             <bold>true</bold>
            </font>
           </property>
@@ -521,7 +515,6 @@ From 0.1 to 20 centimeters per second, MultiTAC can use different probes to stim
             <widget class="QPushButton" name="BeginButton">
              <property name="font">
               <font>
-               <weight>75</weight>
                <bold>true</bold>
               </font>
              </property>
@@ -536,7 +529,7 @@ From 0.1 to 20 centimeters per second, MultiTAC can use different probes to stim
               <string/>
              </property>
              <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
              </property>
             </widget>
            </item>
@@ -553,7 +546,7 @@ From 0.1 to 20 centimeters per second, MultiTAC can use different probes to stim
               <string/>
              </property>
              <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
              </property>
              <property name="placeholderText">
               <string>1;3;10;...</string>
@@ -573,7 +566,7 @@ From 0.1 to 20 centimeters per second, MultiTAC can use different probes to stim
               <string/>
              </property>
              <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
              </property>
             </widget>
            </item>
@@ -583,7 +576,7 @@ From 0.1 to 20 centimeters per second, MultiTAC can use different probes to stim
               <string/>
              </property>
              <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
              </property>
             </widget>
            </item>
@@ -607,14 +600,14 @@ From 0.1 to 20 centimeters per second, MultiTAC can use different probes to stim
               <string/>
              </property>
              <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
              </property>
             </widget>
            </item>
            <item row="1" column="2">
             <widget class="QComboBox" name="bodySite">
              <property name="layoutDirection">
-              <enum>Qt::RightToLeft</enum>
+              <enum>Qt::LayoutDirection::RightToLeft</enum>
              </property>
              <item>
               <property name="text">
@@ -659,7 +652,7 @@ From 0.1 to 20 centimeters per second, MultiTAC can use different probes to stim
            <item row="0" column="2">
             <widget class="QComboBox" name="movementPath">
              <property name="layoutDirection">
-              <enum>Qt::RightToLeft</enum>
+              <enum>Qt::LayoutDirection::RightToLeft</enum>
              </property>
              <item>
               <property name="text">
@@ -702,7 +695,7 @@ From 0.1 to 20 centimeters per second, MultiTAC can use different probes to stim
            <item row="2" column="2">
             <widget class="QComboBox" name="movementDirection">
              <property name="layoutDirection">
-              <enum>Qt::RightToLeft</enum>
+              <enum>Qt::LayoutDirection::RightToLeft</enum>
              </property>
              <item>
               <property name="text">
@@ -736,7 +729,7 @@ From 0.1 to 20 centimeters per second, MultiTAC can use different probes to stim
           </sizepolicy>
          </property>
          <property name="tabShape">
-          <enum>QTabWidget::Rounded</enum>
+          <enum>QTabWidget::TabShape::Rounded</enum>
          </property>
          <property name="currentIndex">
           <number>0</number>
@@ -760,11 +753,11 @@ From 0.1 to 20 centimeters per second, MultiTAC can use different probes to stim
              <x>10</x>
              <y>10</y>
              <width>781</width>
-             <height>271</height>
+             <height>261</height>
             </rect>
            </property>
            <property name="contextMenuPolicy">
-            <enum>Qt::NoContextMenu</enum>
+            <enum>Qt::ContextMenuPolicy::NoContextMenu</enum>
            </property>
            <property name="readOnly">
             <bool>true</bool>
@@ -777,7 +770,7 @@ From 0.1 to 20 centimeters per second, MultiTAC can use different probes to stim
            <property name="geometry">
             <rect>
              <x>690</x>
-             <y>290</y>
+             <y>280</y>
              <width>101</width>
              <height>23</height>
             </rect>
@@ -789,20 +782,272 @@ From 0.1 to 20 centimeters per second, MultiTAC can use different probes to stim
          </widget>
          <widget class="QWidget" name="Page2">
           <attribute name="title">
-           <string>Demo</string>
+           <string>Manual Control</string>
           </attribute>
-          <widget class="QPushButton" name="demoButton">
+          <widget class="QWidget" name="gridLayoutWidget">
            <property name="geometry">
             <rect>
-             <x>320</x>
-             <y>270</y>
-             <width>471</width>
-             <height>23</height>
+             <x>10</x>
+             <y>10</y>
+             <width>391</width>
+             <height>231</height>
             </rect>
            </property>
-           <property name="text">
-            <string>Execute demo!</string>
+           <layout class="QGridLayout" name="gridLayout_3">
+            <item row="0" column="0" colspan="2">
+             <widget class="QLabel" name="label_7">
+              <property name="font">
+               <font>
+                <pointsize>11</pointsize>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>Pen Control</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="Line" name="line_3">
+              <property name="frameShadow">
+               <enum>QFrame::Shadow::Sunken</enum>
+              </property>
+              <property name="lineWidth">
+               <number>2</number>
+              </property>
+              <property name="orientation">
+               <enum>Qt::Orientation::Horizontal</enum>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="1">
+             <widget class="QPushButton" name="moveFwBtn">
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset>
+                <normaloff>icons/bw.png</normaloff>icons/bw.png</iconset>
+              </property>
+              <property name="default">
+               <bool>false</bool>
+              </property>
+              <property name="flat">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="8" column="1">
+             <widget class="QPushButton" name="moveBwBtn">
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset>
+                <normaloff>icons/fw.png</normaloff>icons/fw.png</iconset>
+              </property>
+             </widget>
+            </item>
+            <item row="6" column="0">
+             <widget class="QLabel" name="label_6">
+              <property name="text">
+               <string>Move Right</string>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="0">
+             <widget class="QLabel" name="label_8">
+              <property name="text">
+               <string>Move Forward</string>
+              </property>
+             </widget>
+            </item>
+            <item row="6" column="1">
+             <widget class="QPushButton" name="moveRightBtn">
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset theme="QIcon::ThemeIcon::MediaSeekForward"/>
+              </property>
+             </widget>
+            </item>
+            <item row="8" column="0">
+             <widget class="QLabel" name="label_9">
+              <property name="text">
+               <string>Move Backward</string>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="0">
+             <widget class="QLabel" name="label_5">
+              <property name="text">
+               <string>Move Left</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="Line" name="line_2">
+              <property name="lineWidth">
+               <number>2</number>
+              </property>
+              <property name="orientation">
+               <enum>Qt::Orientation::Horizontal</enum>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="0">
+             <widget class="QLabel" name="label_3">
+              <property name="text">
+               <string>Pen Up</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="1">
+             <widget class="QPushButton" name="penUpBtn">
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset theme="QIcon::ThemeIcon::GoUp"/>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="1">
+             <widget class="QPushButton" name="moveLeftBtn">
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset theme="QIcon::ThemeIcon::MediaSeekBackward"/>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="0">
+             <widget class="QLabel" name="label_4">
+              <property name="text">
+               <string>Pen Down</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="1">
+             <widget class="QPushButton" name="penDownBtn">
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset theme="QIcon::ThemeIcon::GoDown"/>
+              </property>
+             </widget>
+            </item>
+            <item row="9" column="0">
+             <widget class="Line" name="line_4">
+              <property name="orientation">
+               <enum>Qt::Orientation::Horizontal</enum>
+              </property>
+             </widget>
+            </item>
+            <item row="9" column="1">
+             <widget class="Line" name="line_5">
+              <property name="orientation">
+               <enum>Qt::Orientation::Horizontal</enum>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="gridLayoutWidget_2">
+           <property name="geometry">
+            <rect>
+             <x>10</x>
+             <y>240</y>
+             <width>391</width>
+             <height>61</height>
+            </rect>
            </property>
+           <layout class="QGridLayout" name="gridLayout_4">
+            <property name="spacing">
+             <number>0</number>
+            </property>
+            <item row="0" column="0">
+             <widget class="QLabel" name="label_10">
+              <property name="font">
+               <font>
+                <pointsize>11</pointsize>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>Demonstration Run</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QPushButton" name="demoButton">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>150</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>250</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Execute demo!</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="gridLayoutWidget_3">
+           <property name="geometry">
+            <rect>
+             <x>409</x>
+             <y>9</y>
+             <width>381</width>
+             <height>291</height>
+            </rect>
+           </property>
+           <layout class="QGridLayout" name="gridLayout_5">
+            <item row="0" column="0">
+             <widget class="QPlainTextEdit" name="ConsoleOutput2">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+              <property name="placeholderText">
+               <string>Waiting for input...</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </widget>
          </widget>
          <widget class="QWidget" name="Page3">
@@ -864,12 +1109,12 @@ MultiTAC Project Team
      <x>0</x>
      <y>0</y>
      <width>1106</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="contextMenuPolicy">
-     <enum>Qt::ActionsContextMenu</enum>
+     <enum>Qt::ContextMenuPolicy::ActionsContextMenu</enum>
     </property>
     <property name="title">
      <string>File</string>
@@ -947,7 +1192,7 @@ MultiTAC Project Team
     <string>Load Experiment</string>
    </property>
    <property name="shortcutContext">
-    <enum>Qt::WindowShortcut</enum>
+    <enum>Qt::ShortcutContext::WindowShortcut</enum>
    </property>
   </action>
  </widget>
