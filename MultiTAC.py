@@ -2,6 +2,10 @@
 __github__ = "https://github.com/EdgardoCS"
 __email__ = "edgardo.silva@uv.cl"
 
+import re
+import itertools
+
+
 import os
 import sys
 import time
@@ -184,6 +188,7 @@ class AxiDraw(threading.Thread):
                 speed = msg[1]
                 direction = msg[2]
                 distance = msg[3]
+                rep = 1
                 # print('Brushing at ' + str(speed) + ' cm/s')
                 if direction == 'Left to Right':
                     brush.pen_down(self.serial_port)
@@ -198,12 +203,14 @@ class AxiDraw(threading.Thread):
 
                     # circular movement
                 elif direction == 'CW':
+                    distance = np.round(distance / 2)
                     brush.pen_down(self.serial_port)
-                    brush.move_circular(self.serial_port, speed, 0.67, 1, direction)
+                    brush.move_circular(self.serial_port, speed, distance,rep,  direction)
                     brush.pen_up(self.serial_port)
                 elif direction == 'ACW':
+                    distance = np.round(distance / 2)
                     brush.pen_down(self.serial_port)
-                    brush.move_circular(self.serial_port, speed, 0.67, 1, direction)
+                    brush.move_circular(self.serial_port, speed, distance, rep, direction)
                     brush.pen_up(self.serial_port)
 
                 brush.sendDisableMotors(self.serial_port)
@@ -426,6 +433,15 @@ class MainUI(QMainWindow):
     def execute_brushing(self, progress_callback):
         """
         new Thread! Execute trials and send signals to brush through Queue
+        data[0] = movementPath
+        data[1] = bodySite
+        data[2] = movementDirection
+        data[3] = velocitiesInput
+        data[4] = distanceInput
+        data[5] = repetitionsInput
+        data[6] = intertrialIntput
+        data[7] = vastimeInput
+
         :param self
         :param progress_callback: Real-time feedback from worker
         """
@@ -433,27 +449,39 @@ class MainUI(QMainWindow):
         trialsRnd = []
         data = self.getExperimentData()
 
+        path = data[0]
         direction = data[2]
-        trials = data[3].split(";")
-        distance = int(data[4])
+        # trials = data[3].split(";")
+        # distance = int(data[4])
+        trials = [eval(i.strip()) for i in re.split(r'[;,]', data[3])]
+        distance = [eval(i.strip()) for i in re.split(r'[;,]', data[4])]
         reps = int(data[5])
         interTime = int(data[6])
         VasTime = int(data[7])
 
-        totalTrials = len(trials) * reps
+        if path == "Circular":
+            if direction == "Left to Right":
+                direction = "CW"
+            elif direction == "Right to Left":
+                direction = "ACW"
+
+        totalTrials = len(trials) * len(distance) * reps
         trialCount = 1
 
-        trials = [eval(i) for i in trials]
+        base_combinations = list(itertools.product(trials, distance))
 
-        for i in range(0, reps):
-            trialsRnd.append(random.sample(trials, len(trials)))
-        for cycle in trialsRnd:
-            for trial in cycle:
+        cyclesRnd = []
+        for i in range(reps):
+            cyclesRnd.append(random.sample(base_combinations, len(base_combinations)))
+
+        for cycle in cyclesRnd:
+            for trial, dist in cycle:
                 answer = None
-                self.printToConsole('Brushing at ' + str(trial) + ' cm/s')
-                # add from here to csv, combine with vas results?
-                q_to_ad.put(['hellofriend.mov', trial, direction, distance])
+                self.printToConsole(f'Brushing at {trial} cm/s with distance {dist} cm')
+                # Send both trial speed and distance into the queue packet
+                q_to_ad.put(['hellofriend.mov', trial, direction, dist])
                 answer = q_from_ad.get()
+
                 progress_callback.emit(totalTrials - trialCount)
                 trialCount += 1
                 """

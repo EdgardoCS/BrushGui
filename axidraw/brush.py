@@ -369,11 +369,13 @@ def move_x(serial_port, x_dest, speed):
     x_dest /= 2.54
     speed /= 2.54
     y_dest, v_i, v_f = 0, 0, 0
-    # print_info(f'Brushing to {x_dest} with speed {speed}')
+    print_info(f'Brushing to {x_dest} with speed {speed}')
 
     f_curr_x, f_curr_y = 0, 0
     delta_x_inches = x_dest - f_curr_x
     delta_y_inches = y_dest - f_curr_y
+
+    # print(delta_x_inches, delta_y_inches)
 
     # Velocity inputs; clarify units.
     vi_inches_per_sec = v_i
@@ -572,6 +574,8 @@ def move_x(serial_port, x_dest, speed):
             fractional_distance = dist_array[index] / position
             dest_array1.append(int(round(fractional_distance * motor_steps1)))
             dest_array2.append(int(round(fractional_distance * motor_steps2)))
+            print(dest_array1)
+            print(dest_array2)
 
         sum(dest_array1)
         prev_motor1 = 0
@@ -600,6 +604,8 @@ def move_x(serial_port, x_dest, speed):
 
             prev_motor1 += move_steps1
             prev_motor2 += move_steps2
+
+            print(prev_motor1, prev_motor2)
 
             if move_steps1 != 0 or move_steps2 != 0:  # if at least one motor step
                 # is required for this move.
@@ -891,6 +897,10 @@ def move_y(serial_port, y_dest, speed):
                 f_curr_x = f_new_x  # Update current position
                 f_curr_y = f_new_y
 
+# def move_natural(serial_port, x_dest, y_dest, speed)
+
+
+
 def doOval(serial_port, theta, speed, radius_x, radius_y):
     """
 
@@ -911,7 +921,6 @@ def doOval(serial_port, theta, speed, radius_x, radius_y):
     y_dest = radius_y * math.sin(delta) / speed
     print('x', x_dest)
     print('y', y_dest)
-
 
 def demoMov(serial_port):
     """
