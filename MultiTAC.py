@@ -5,7 +5,6 @@ __email__ = "edgardo.silva@uv.cl"
 import re
 import itertools
 
-
 import os
 import sys
 import time
@@ -46,6 +45,12 @@ class WorkerSignals(QObject):
 
 class vasWorker(QRunnable):
     def __init__(self, fn, *args, **kwargs):
+        """
+
+        :param fn:
+        :param args:
+        :param kwargs:
+        """
         super(vasWorker, self).__init__()
         # Store constructor arguments (re-used for processing)
         self.fn = fn
@@ -122,99 +127,262 @@ class AxiDraw(threading.Thread):
     """
 
     def __init__(self, q_in, q_out):
-        threading.Thread.__init__(self)
+        super().__init__()
         self.serial_port = None
         self.running = True
         self.serial_status = False
-        self.running = True
         self.q_in = q_in
         self.q_out = q_out
 
     def stop(self):
+        """
+        stop the thread
+        :return:
+        """
         self.running = False
         # Here we need to close the serial port!
         print('Axidraw thread stopped')
 
     def run(self):
+        """
+        Run AxiDraw main thread, receives messages from q_in and sends answers with q_out
+        """
         while self.running:
             msg = self.q_in.get()
-            if msg == 'open_port':
-                port = brush.findPort()  # Success!! Axidraw founded in COMPort
-                if port:
-                    self.serial_port, self.serial_status = brush.openPort(port)
-                    if self.serial_port:
-                        if self.serial_status:
-                            self.q_out.put(self.serial_port.name, self.serial_status)
-                            # return self.serial_port.name
-                        else:
-                            self.q_out.put(self.serial_port.name)
-                            # return self.serial_port.name
-                    else:
-                        print('Could not find a port with an AxiDraw connected')
-                        self.q_out.put('not-OK')
-                else:
-                    print('Could not find a port with an AxiDraw connected')
-                    self.q_out.put('not-OK')
+            self.handle_message(msg)
 
-            if msg == 'close_port':
-                port = brush.findPort()
-                if port is None:
-                    print('Could not find a port with an AxiDraw connected')
-                else:
-                    print('Closing port', port)
-                    self.serial_port = brush.closePort(port)
+    def handle_message(self, msg):
+        """Dispatches incoming messages to their respective handlers
+        Helper to guard commands that require an active serial port
+        :param msg:message to be send to brush.py (string type)
+        """
 
-            if msg == "penUp":
-                brush.pen_up(self.serial_port)
+        def with_port(action):
+            if self.serial_port is None:
+                print('Could not find a port with an AxiDraw connected')
+            else:
+                action(self.serial_port)
 
-            if msg == "penDown":
-                brush.pen_down(self.serial_port)
-
-            if msg == "moveLeft":
-                brush.move_x(self.serial_port, 2, 5)
-            if msg == "moveRight":
-                brush.move_x(self.serial_port, -2, 5)
-
-            if msg == "moveForward":
-                brush.move_y(self.serial_port, 2, 5)
-            if msg == "moveBackward":
-                brush.move_y(self.serial_port, -2, 5)
-
-            if msg == "demoMov":
-                brush.demoMov(self.serial_port)
-
-            if msg[0] == 'hellofriend.mov':
-                brush.sendEnableMotors(self.serial_port, 2)
+        # Handle parameterized messages like 'hellofriend.mov'
+        if isinstance(msg, (list, tuple)) and len(msg) > 0 and msg[0] == 'hellofriend.mov':
+            def execute_hellofriend(port):
+                brush.sendEnableMotors(port, 2)
                 speed = msg[1]
                 direction = msg[2]
                 distance = msg[3]
                 rep = 1
-                # print('Brushing at ' + str(speed) + ' cm/s')
-                if direction == 'Left to Right':
-                    brush.pen_down(self.serial_port)
-                    brush.move_x(self.serial_port, distance, speed)
-                    brush.pen_up(self.serial_port)
-                    brush.move_x(self.serial_port, -distance, 3)
-                elif direction == 'Right to Left':
-                    brush.pen_down(self.serial_port)
-                    brush.move_x(self.serial_port, -distance, 3)
-                    brush.pen_up(self.serial_port)
-                    brush.move_x(self.serial_port, distance, speed)
 
-                    # circular movement
+                if direction == 'Left to Right':
+                    brush.pen_down(port)
+                    brush.move_x(port, distance, speed)
+                    brush.pen_up(port)
+                    brush.move_x(port, -distance, 3)
+                elif direction == 'Right to Left':
+                    brush.pen_down(port)
+                    brush.move_x(port, -distance, 3)
+                    brush.pen_up(port)
+                    brush.move_x(port, distance, speed)
                 elif direction == 'CW':
                     distance = np.round(distance / 2)
-                    brush.pen_down(self.serial_port)
-                    brush.move_circular(self.serial_port, speed, distance,rep,  direction)
-                    brush.pen_up(self.serial_port)
+                    brush.pen_down(port)
+                    brush.move_circular(port, speed, distance, rep, direction)
+                    brush.pen_up(port)
                 elif direction == 'ACW':
                     distance = np.round(distance / 2)
-                    brush.pen_down(self.serial_port)
-                    brush.move_circular(self.serial_port, speed, distance, rep, direction)
-                    brush.pen_up(self.serial_port)
+                    brush.pen_down(port)
+                    brush.move_circular(port, speed, distance, rep, direction)
+                    brush.pen_up(port)
 
-                brush.sendDisableMotors(self.serial_port)
+                brush.sendDisableMotors(port)
                 self.q_out.put('OK')
+
+            with_port(execute_hellofriend)
+            return
+
+        # Dictionary mapping messages to functions
+        commands = {
+            "open_port": self._open_port,
+            "close_port": self._close_port,
+            "penUp": lambda: with_port(brush.pen_up),
+            "penDown": lambda: with_port(brush.pen_down),
+            "moveLeft": lambda: with_port(lambda port: brush.move_x(port, 2, 5)),
+            "moveRight": lambda: with_port(lambda port: brush.move_x(port, -2, 5)),
+            "moveForward": lambda: with_port(lambda port: brush.move_y(port, 2, 5)),
+            "moveBackward": lambda: with_port(lambda port: brush.move_y(port, -2, 5)),
+            "demoMov": lambda: with_port(lambda port: brush.demoMov(port)),
+            "walkHome": lambda: with_port(lambda port: self._handle_homing(port)),
+            "queryPosition": lambda: with_port(lambda port: self._handle_query_position(port)),
+        }
+
+        action = commands.get(msg)
+        if action:
+            action()
+            time.sleep(1)
+        else:
+            print(f"Unknown message received: {msg}")
+
+    def _open_port(self):
+        port = brush.findPort()
+        if port:
+            self.serial_port, self.serial_status = brush.openPort(port)
+            if self.serial_port:
+                if self.serial_status:
+                    self.q_out.put(self.serial_port.name, self.serial_status)
+                else:
+                    self.q_out.put(self.serial_port.name)
+            else:
+                print('Could not find a port with an AxiDraw connected')
+                self.q_out.put('not-OK')
+        else:
+            print('Could not find a port with an AxiDraw connected')
+            self.q_out.put('not-OK')
+
+    def _close_port(self):
+        port = brush.findPort()
+        if port is None:
+            print('Could not find a port with an AxiDraw connected')
+        else:
+            print('Closing port', port)
+            self.serial_port = brush.closePort(port)
+
+    def _handle_homing(self, port):
+        """Safely executes native homing and signals queue when done"""
+        # Optional: ensure pen is up before homing so it doesn't drag across the paper
+        brush.pen_up(port)
+
+        # Call the native EBB command (e.g., at 2000 steps/sec)
+        brush.walk_home(port, step_frequency=2000)
+
+        # Notify queue listener that homing is complete
+        self.q_out.put('HOME_OK')
+
+    def _handle_query_position(self, port):
+        """Safely executes native query position signals queue when done"""
+        brush.query_position(port)
+        self.q_out.put('HOME_OK')
+
+
+# class AxiDraw(threading.Thread):
+#     """
+#     AxiDraw main thread
+#     Set of functions to communicate with axidraw device, can manipulate port (open, close) and send
+#     signals to initialize movement(move_x, move_y, pen_up, pen_down.
+#     """
+#
+#     def __init__(self, q_in, q_out):
+#         threading.Thread.__init__(self)
+#         self.serial_port = None
+#         self.running = True
+#         self.serial_status = False
+#         self.q_in = q_in
+#         self.q_out = q_out
+#
+#     def stop(self):
+#         """
+#         stop the thread
+#         :return:
+#         """
+#         self.running = False
+#         # Here we need to close the serial port!
+#         print('Axidraw thread stopped')
+#
+#     def run(self):
+#         """
+#         run Axidraw main thread, recieves messages from q_in and sends answers with q_out
+#         :return:
+#         """
+#         while self.running:
+#             msg = self.q_in.get()
+#             if msg == 'open_port':
+#                 port = brush.findPort()  # Success!! Axidraw founded in COMPort
+#                 if port:
+#                     self.serial_port, self.serial_status = brush.openPort(port)
+#                     if self.serial_port:
+#                         if self.serial_status:
+#                             self.q_out.put(self.serial_port.name, self.serial_status)
+#                             # return self.serial_port.name
+#                         else:
+#                             self.q_out.put(self.serial_port.name)
+#                             # return self.serial_port.name
+#                     else:
+#                         print('Could not find a port with an AxiDraw connected')
+#                         self.q_out.put('not-OK')
+#                 else:
+#                     print('Could not find a port with an AxiDraw connected')
+#                     self.q_out.put('not-OK')
+#
+#             if msg == 'close_port':
+#                 port = brush.findPort()
+#                 if port is None:
+#                     print('Could not find a port with an AxiDraw connected')
+#                 else:
+#                     print('Closing port', port)
+#                     self.serial_port = brush.closePort(port)
+#
+#             def handle_message(self, msg):
+#                 # 1. Helper to guard commands that require an active serial port
+#                 def with_port(action):
+#                     if self.serial_port is None:
+#                         print('Could not find a port with an AxiDraw connected')
+#                     else:
+#                         action(self.serial_port)
+#             if msg == "penUp":
+#                 if self.serial_port == None:
+#                     print('Could not find a port with an AxiDraw connected')
+#                 else:
+#                     brush.pen_up(self.serial_port)
+#
+#             if msg == "penDown":
+#                 if self.serial_port == None:
+#                     print('Could not find a port with an AxiDraw connected')
+#                 else:
+#                     brush.pen_down(self.serial_port)
+#
+#             if msg == "moveLeft":
+#                 brush.move_x(self.serial_port, 2, 5)
+#             if msg == "moveRight":
+#                 brush.move_x(self.serial_port, -2, 5)
+#
+#             if msg == "moveForward":
+#                 brush.move_y(self.serial_port, 2, 5)
+#             if msg == "moveBackward":
+#                 brush.move_y(self.serial_port, -2, 5)
+#
+#             if msg == "demoMov":
+#                 brush.demoMov(self.serial_port)
+#
+#             if msg[0] == 'hellofriend.mov':
+#                 brush.sendEnableMotors(self.serial_port, 2)
+#                 speed = msg[1]
+#                 direction = msg[2]
+#                 distance = msg[3]
+#                 rep = 1
+#                 # print('Brushing at ' + str(speed) + ' cm/s')
+#                 if direction == 'Left to Right':
+#                     brush.pen_down(self.serial_port)
+#                     brush.move_x(self.serial_port, distance, speed)
+#                     brush.pen_up(self.serial_port)
+#                     brush.move_x(self.serial_port, -distance, 3)
+#                 elif direction == 'Right to Left':
+#                     brush.pen_down(self.serial_port)
+#                     brush.move_x(self.serial_port, -distance, 3)
+#                     brush.pen_up(self.serial_port)
+#                     brush.move_x(self.serial_port, distance, speed)
+#
+#                     # circular movement
+#                 elif direction == 'CW':
+#                     distance = np.round(distance / 2)
+#                     brush.pen_down(self.serial_port)
+#                     brush.move_circular(self.serial_port, speed, distance,rep,  direction)
+#                     brush.pen_up(self.serial_port)
+#                 elif direction == 'ACW':
+#                     distance = np.round(distance / 2)
+#                     brush.pen_down(self.serial_port)
+#                     brush.move_circular(self.serial_port, speed, distance, rep, direction)
+#                     brush.pen_up(self.serial_port)
+#
+#                 brush.sendDisableMotors(self.serial_port)
+#                 self.q_out.put('OK')
 
 
 # Queue params:
@@ -282,6 +450,10 @@ class MainUI(QMainWindow):
         self.moveRightBtn.clicked.connect(self.manualRight)
         self.moveFwBtn.clicked.connect(self.manualForward)
         self.moveBwBtn.clicked.connect(self.manualBackward)
+
+        # position control buttons
+        self.homeButton.clicked.connect(self.walkHome)
+        self.positionButton.clicked.connect(self.queryPosition)
 
     def printToConsole(self, text):
         """
@@ -566,6 +738,12 @@ class MainUI(QMainWindow):
     def executeDemo(self):
         q_to_ad.put('demoMov')
         self.printToConsole2("Instruction: Execute Demo!")
+
+    def walkHome(self):
+        q_to_ad.put('walkHome')
+
+    def queryPosition(self):
+        q_to_ad.put('queryPosition')
 
 
 if __name__:

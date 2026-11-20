@@ -1,10 +1,8 @@
 import math
-import random
-import sys
 import time
-from array import array
-
 import serial
+import random
+from array import array
 
 # import axi
 
@@ -358,569 +356,1121 @@ def pen_up(serial_port):
     command(serial_port, 'PO,B,3,0\r')  # Trigger
 
 
-def move_x(serial_port, x_dest, speed):
+def walk_home(serial_port, step_frequency=1000):
     """
-    Move the pen in the x direction for a given distance and speed.
-    Speed and distance in centimeters.
-    :param serial_port: COM PORT
-    :param x_dest: target distance (in cm)
-    :param speed: target speed (in cm/s)
+    Sends the native EBB 'HM' command to return the AxiDraw to home (0,0)
+    at the specified step frequency.
+
+    :param serial_port: Active serial port connection
+    :param step_frequency: Speed in steps per second (1 to 25000)
     """
-    x_dest /= 2.54
-    speed /= 2.54
-    y_dest, v_i, v_f = 0, 0, 0
-    print_info(f'Brushing to {x_dest} with speed {speed}')
+    if serial_port is None:
+        print("Error: Serial port is not open.")
+        return False
 
-    f_curr_x, f_curr_y = 0, 0
-    delta_x_inches = x_dest - f_curr_x
-    delta_y_inches = y_dest - f_curr_y
+    # Format the command per EBB specification: HM,StepFrequency<CR>
+    command_str = f"HM,{step_frequency}\r"
 
-    # print(delta_x_inches, delta_y_inches)
+    print(f"Sending native home command: {command_str.strip()}")
+    serial_port.write(command_str.encode('ascii'))
 
-    # Velocity inputs; clarify units.
-    vi_inches_per_sec = v_i
-    vf_inches_per_sec = v_f
+    # Read the response from EBB (handles legacy 'OK' or future 'HM')
+    response = serial_port.readline().decode('ascii').strip()
+    print(f"EBB Response: {response}")
 
-    # Distance in inches that the motor+belt must turn through at Motor 1 and 2
-    motor_dist1 = delta_x_inches + delta_y_inches
-    motor_dist2 = delta_x_inches - delta_y_inches
+    return response
 
-    # Look at distance to move along 45-degree axes, for native motor steps: Recall that StepScaleFactor gives a
-    # scaling factor for converting from inches to steps. It is *not* the native resolution StepScaleFactor is Either
-    # 1016 or 2032, for 8X or 16X microstepping, respectively.
 
-    # resolution = 1 # 16x microstepping
-    resolution = 2  # 8x microstepping
-    print_info('Using resolution value of', resolution)
+def query_position(serial_port):
+    """
+    Sends the native EBB 'QS' query to retrieve the current
+    global step positions of Motor 1 and Motor 2.
 
-    if resolution == 2:
-        StepScaleFactor = 1016.0
-    else:
-        StepScaleFactor = 1016.0 * 2  # Value from variable NativeResFactor in axidraw_conf.py
+    :param serial_port: Active serial port connection
+    :return: Tuple of (motor1_steps, motor2_steps) or None
+    """
+    if serial_port is None:
+        print("Error: Serial port is not open.")
+        return None
 
-    # Round the requested motion to the nearest motor step.
-    motor_steps1 = int(round(StepScaleFactor * motor_dist1))
-    motor_steps2 = int(round(StepScaleFactor * motor_dist2))
+    # Send QS command with carriage return (<CR>)
+    serial_port.write(b"QS\r")
+    try:
+        response_lines = []
+        # Read lines from the serial buffer until we receive 'OK' or clear it
+        while True:
+            line = serial_port.readline().decode('ascii').strip()
+            if not line:
+                break
+            if line == "OK":
+                break
+            response_lines.append(line)
+        data_line = response_lines[0]
+        if data_line.startswith("QS,"):
+            data_line = data_line[3:]
 
-    # Since we are rounding, we need to keep track of the actual distance moved,
-    # not just the _requested_ distance to move.
+        if ',' in data_line:
+            m1, m2 = map(int, data_line.split(','))
+            print(f"Motor 1 Step Position: {m1} | Motor 2 Step Position: {m2}")
+            return m1, m2
+    except Exception as e:
+        print(f"Error querying step position: {e}")
+        return None
 
-    motor_dist1_rounded = float(motor_steps1) / (2.0 * StepScaleFactor)
-    motor_dist2_rounded = float(motor_steps2) / (2.0 * StepScaleFactor)
+    # print(line)
+    # print(serial_port.readline().decode('ascii'))
+    # try:
+    #     response_lines = []
+    #     while True:
+    #         line = serial_port.readline().decode('ascii').strip()
+    #         if not line:
+    #             break
+    #         if line == "OK":
+    #             break
+    #         response_lines.append(line)
+    #
+    #     if not response_lines:
+    #         print("No response received from QS query.")
+    #         return None
+    #
+    #     # The first non-empty data line contains the positions
+    #     # (e.g., "1421,-429" for legacy or "QS,1421,-429" for future mode)
+    #     data_line = response_lines[0]
+    #     if data_line.startswith("QS,"):
+    #         data_line = data_line[3:]
+    #
+    #     if ',' in data_line:
+    #         m1, m2 = map(int, data_line.split(','))
+    #         # print(f"Motor 1 Step Position: {m1} | Motor 2 Step Position: {m2}")
+    #         return m1, m2
+    #     else:
+    #         print(f"Unexpected QS response format: {data_line}")
+    #         return None
+    #
+    # except Exception as e:
+    #     print(f"Error querying step position: {e}")
+    #     return None
 
-    # Convert back to find the actual X & Y distances that will be moved:
-    delta_x_inches_rounded = (motor_dist1_rounded + motor_dist2_rounded)
-    delta_y_inches_rounded = (motor_dist1_rounded - motor_dist2_rounded)
+# --- Module-Level Constants ---
+STEP_SCALE_FACTOR = 1016.0  # Resolution = 2 (8x microstepping)
+PEN_UP_SPEED = 100
+PEN_DOWN_SPEED = 100
+SPEED_LIM_HR = 3
+ACCEL_RATE = 100
+ACCEL_RATE_PU = 60.0
+TIME_SLICE = 0.025
+MAX_STEP_RATE = 24.995
 
-    # If total movement is less than one step, skip this movement.
+
+def _execute_trajectory(serial_port, x_inches, y_inches, speed, pen_up=False, custom_time=None):
+    """
+    Core private helper: handles trajectory generation, acceleration/deceleration
+    ramps, microstepping calculations, and serial communication for ALL movements.
+    """
+    motor_dist1 = x_inches + y_inches
+    motor_dist2 = x_inches - y_inches
+
+    motor_steps1 = int(round(STEP_SCALE_FACTOR * motor_dist1))
+    motor_steps2 = int(round(STEP_SCALE_FACTOR * motor_dist2))
+
     if abs(motor_steps1) < 1 and abs(motor_steps2) < 1:
-        print('Total movement less than one step, skipping this movement')
+        return  # Skip movements smaller than one step
 
-    segment_length_inches = distance(delta_x_inches_rounded, delta_y_inches_rounded)
+    motor_dist1_rounded = float(motor_steps1) / (2.0 * STEP_SCALE_FACTOR)
+    motor_dist2_rounded = float(motor_steps2) / (2.0 * STEP_SCALE_FACTOR)
 
-    # From axidraw_conf
-    PenUpSpeed = 100  # Default pen-up speed (%).   Range: 1 - 110 %
-    PenDownSpeed = 100  # 25 # Default pen-down speed (%). Range: 1 - 110 %
-    SpeedLimXY_LR = 1  # 12.000 # Maximum XY speed allowed when in Low Resolution
-    #                        # mode, in inches per second. Default: 12.000 Max:
-    #                        # 17.3958
+    delta_x_rounded = motor_dist1_rounded + motor_dist2_rounded
+    delta_y_rounded = motor_dist1_rounded - motor_dist2_rounded
+    segment_length = math.hypot(delta_x_rounded, delta_y_rounded)
 
-    SpeedLimXY_HR = 3  # 8.6979 # Maximum XY speed allowed when in High Resolution
-    #                        # mode, in inches per second. Default: 8.6979, Max:
-    #                        # 8.6979 Do not increase these values above Max;
-    #                        # they are derived from MaxStepRate and the
-    #                        # resolution.
-    # SpeedLimXY_LR = speed
-    # SpeedLimXY_HR = speed
-    # Acceleration & Deceleration rates:
-    AccelRate = 100  # 40.0    # Standard acceleration rate, inches per second squared
-    AccelRatePU = 60.0  # Pen-up acceleration rate, inches per second squared
-    accel = 100  # 50              # Acceleration rate factor (1-100)
-    TimeSlice = 0.025  # Interval, in seconds, of when to update the
-    # motors. Default: TimeSlice = 0.025 (25 ms)
-    MaxStepRate = 24.995  # Maximum allowed motor step rate, in steps per millisecond.
-    # Note that 25 kHz is the absolute maximum step rate for the EBB.
-    # Movement commands faster than this are ignored; may result in a crash (loss of position control).
-    # We use a conservative value, to help prevent errors due to rounding.
-    # This value is normally used _for speed limit checking only_.
+    speed_limit = (PEN_UP_SPEED if pen_up else PEN_DOWN_SPEED) * SPEED_LIM_HR / 110.0
+    accel_rate = ACCEL_RATE_PU if pen_up else ACCEL_RATE
 
-    speed_pendown = PenDownSpeed * SpeedLimXY_HR / 110.0  # Speed given as
-    # maximum inches/second
-    # in XY plane
-    speed_penup = PenUpSpeed * SpeedLimXY_HR / 110.0  # Speed given as
-    # maximum
-    # inches/second in XY
-    # plane
-
-    # Note: The value of `accel`, in the Inkscape extension, depends on the
-    # timing parameter "Acceleration"
-
-    # <param indent="1" name="accelFactor" type="optiongroup"
-    # appearance="minimal" _gui-text="Acceleration :">
-    # <_option value="50">Standard</_option>
-    # <_option value="100">Maximum</_option>
-    # <_option value="75">High</_option>
-    # <_option value="35">Slow</_option>
-    # <_option value="10">Very slow</_option>
-    # </param>
-
-    pen_up = False
-    if pen_up:
-        speed_limit = speed_penup
-    else:
-        speed_limit = speed_pendown
-
-    # Acceleration/deceleration rates:
-    if pen_up:
-        accel_rate = AccelRatePU * accel / 100.0
-    else:
-        accel_rate = AccelRate * accel / 100.0
-
-    # Maximum acceleration time: Time needed to accelerate from full stop to
-    # maximum speed: v = a * t, so t_max = vMax / a
     t_max = speed_limit / accel_rate
+    accel_dist_max = 0.5 * accel_rate * (t_max ** 2)
+    decel_dist_max = accel_dist_max
 
-    # Distance that is required to reach full speed, from zero speed:  x = 1/2 a t^2
-    accel_dist = 0.5 * accel_rate * t_max * t_max
-
-    if vi_inches_per_sec > speed_limit:
-        vi_inches_per_sec = speed_limit
-    if vf_inches_per_sec > speed_limit:
-        vf_inches_per_sec = speed_limit
-
-    # Times to reach maximum speed, from our initial velocity
-    # vMax = vi + a*t  =>  t = (vMax - vi)/a
-    # vf = vMax - a*t   =>  t = -(vf - vMax)/a = (vMax - vf)/a
-    # -- These are _maximum_ values. We often do not have enough time/space to reach full speed.
-
-    t_accel_max = (speed_limit - vi_inches_per_sec) / accel_rate
-    t_decel_max = (speed_limit - vf_inches_per_sec) / accel_rate
-    # Distance that is required to reach full speed, from our start at speed vi_inches_per_sec:
-    # distance = vi * t + (1/2) a t^2
-    accel_dist_max = (vi_inches_per_sec * t_accel_max) + (0.5 * accel_rate * t_accel_max * t_accel_max)
-    # Use the same model for deceleration distance; modeling it with backwards motion:
-    decel_dist_max = (vf_inches_per_sec * t_decel_max) + (0.5 * accel_rate * t_decel_max * t_decel_max)
-
-    # time slices: Slice travel into intervals that are (say) 30 ms long.
-    time_slice = TimeSlice  # Default slice intervals
-
-    # Declare arrays: These are _normally_ 4-byte integers, but could
-    # (theoretically) be 2-byte integers on some systems.  if so, this could
-    # cause errors in rare cases (very large/long moves, etc.).  Set up an
-    # alert system, just in case!
-
-    duration_array = array('I')  # unsigned integer for duration -- up to
-    # 65 seconds for a move if only 2 bytes.
-    dist_array = array('f')  # float
-    dest_array1 = array('i')  # signed integer
-    dest_array2 = array('i')  # signed integer
+    duration_array = array('I')
+    dist_array = array('f')
+    dest_array1 = array('i')
+    dest_array2 = array('i')
 
     time_elapsed = 0.0
     position = 0.0
-    velocity = vi_inches_per_sec
-    speed_max = speed_limit  # We will reach _full cruising speed_!
+    velocity = 0.0
+    speed_max = speed_limit
 
-    intervals = int(math.floor(t_accel_max / time_slice))  # Number of intervals during acceleration
-
-    # If intervals == 0, then we are already at (or nearly at) full speed.
+    # 1. Acceleration Phase
+    intervals = int(math.floor(t_max / TIME_SLICE))
     if intervals > 0:
-        time_per_interval = t_accel_max / intervals
-
-        velocity_step_size = (speed_max - vi_inches_per_sec) / (intervals + 1.0)
-        # For six time intervals of acceleration, first interval is at velocity (max/7)
-        # 6th (last) time interval is at 6*max/7
-        # after this interval, we are at full speed.
-
-        for index in range(0, intervals):  # Calculate acceleration phase
-            velocity += velocity_step_size
-            time_elapsed += time_per_interval
-            position += velocity * time_per_interval
+        dt = t_max / intervals
+        v_step = speed_max / (intervals + 1.0)
+        for _ in range(intervals):
+            velocity += v_step
+            time_elapsed += dt
+            position += velocity * dt
             duration_array.append(int(round(time_elapsed * 1000.0)))
-            dist_array.append(position)  # Estimated distance along direction of travel
+            dist_array.append(position)
 
-            # Add a center "coasting" speed interval IF there is time for it.
-        coasting_distance = segment_length_inches - (accel_dist_max + decel_dist_max)
+    # 2. Coasting Phase
+    coasting_dist = segment_length - (accel_dist_max + decel_dist_max)
+    if coasting_dist > (TIME_SLICE * speed_max):
+        cruising_time = coasting_dist / speed
+        time_elapsed += cruising_time
+        duration_array.append(int(round(time_elapsed * 1000.0)))
+        position += speed * cruising_time
+        dist_array.append(position)
 
-        if coasting_distance > (time_slice * speed_max):
-            # There is enough time for (at least) one interval at full cruising speed.
-            velocity = speed  # speed_max
-            cruising_time = coasting_distance / velocity
-            time_elapsed += cruising_time
+    # 3. Deceleration Phase
+    if intervals > 0:
+        dt = t_max / intervals
+        v_step = speed_max / (intervals + 1.0)
+        for _ in range(intervals):
+            velocity -= v_step
+            time_elapsed += dt
+            position += velocity * dt
             duration_array.append(int(round(time_elapsed * 1000.0)))
-            position += velocity * cruising_time
-            dist_array.append(position)  # Estimated distance along direction of travel
+            dist_array.append(position)
 
-        # Number of intervals during deceleration
-        intervals = int(math.floor(t_decel_max / time_slice))
+    # Scale trajectory to actual step counts
+    for d in dist_array:
+        fraction = d / position if position > 0 else 0
+        dest_array1.append(int(round(fraction * motor_steps1)))
+        dest_array2.append(int(round(fraction * motor_steps2)))
 
-        time_per_interval = t_decel_max / intervals
-        velocity_step_size = (speed_max - vf_inches_per_sec) / (intervals + 1.0)
+    # Execute step commands over serial port
+    prev_m1, prev_m2, prev_t = 0, 0, 0
+    for idx in range(len(dest_array1)):
+        move_m1 = dest_array1[idx] - prev_m1
+        move_m2 = dest_array2[idx] - prev_m2
+        move_time = custom_time if custom_time else max(1, duration_array[idx] - prev_t)
+        prev_t = duration_array[idx]
 
-        for index in range(0, intervals):  # Calculate deceleration phase
-            velocity -= velocity_step_size
-            time_elapsed += time_per_interval
-            position += velocity * time_per_interval
-            duration_array.append(int(round(time_elapsed * 1000.0)))
-            dist_array.append(position)  # Estimated distance along direction of travel
-        """
-        The time & distance motion arrays for this path segment are now computed.
-        Next: We scale to the correct intended travel distance,
-        round into integer motor steps and manage the process
-        of sending the output commands to the motors.
-        """
-        for index in range(0, len(dist_array)):
-            # Scale our trajectory to the "actual" travel distance that we need:
-            # Fractional position along the intended path
-            fractional_distance = dist_array[index] / position
-            dest_array1.append(int(round(fractional_distance * motor_steps1)))
-            dest_array2.append(int(round(fractional_distance * motor_steps2)))
-            print(dest_array1)
-            print(dest_array2)
+        if abs(move_m1 / move_time) < 0.002: move_m1 = 0
+        if abs(move_m2 / move_time) < 0.002: move_m2 = 0
 
-        sum(dest_array1)
-        prev_motor1 = 0
-        prev_motor2 = 0
-        prev_time = 0
+        while (abs(move_m1 / move_time) >= MAX_STEP_RATE) or (abs(move_m2 / move_time) >= MAX_STEP_RATE):
+            move_time += 1
 
-        for index in range(0, len(dest_array1)):
-            move_steps1 = dest_array1[index] - prev_motor1
-            move_steps2 = dest_array2[index] - prev_motor2
-            move_time = duration_array[index] - prev_time
-            prev_time = duration_array[index]
+        prev_m1 += move_m1
+        prev_m2 += move_m2
 
-            if move_time < 1:
-                move_time = 1  # don't allow zero-time moves.
+        if move_m1 != 0 or move_m2 != 0:
+            doXYMove(serial_port, move_m2, move_m1, move_time)
+            if move_time > 50 and not custom_time:
+                time.sleep((move_time - 10) / 1000.0)
 
-            if abs(float(move_steps1) / float(move_time)) < 0.002:
-                move_steps1 = 0  # don't allow too-slow movements of this axis
-            if abs(float(move_steps2) / float(move_time)) < 0.002:
-                move_steps2 = 0  # don't allow too-slow movements of this axis
 
-            # Don't allow too fast movements of either axis: Catch rounding errors
-            # that could cause an overspeed event
-            while ((abs(float(move_steps1) / float(move_time)) >= MaxStepRate)
-                   or (abs(float(move_steps2) / float(move_time)) >= MaxStepRate)):
-                move_time += 1
+# --- Public Movement APIs ---
 
-            prev_motor1 += move_steps1
-            prev_motor2 += move_steps2
+def move_xy(serial_port, x_dest_cm, y_dest_cm, speed_cm, pen_up=False):
+    """Linear movement function for X, Y, or diagonal paths."""
+    x_inches = x_dest_cm / 2.54
+    y_inches = y_dest_cm / 2.54
+    speed_inches = speed_cm / 2.54
+    _execute_trajectory(serial_port, x_inches, y_inches, speed_inches, pen_up=pen_up)
 
-            print(prev_motor1, prev_motor2)
 
-            if move_steps1 != 0 or move_steps2 != 0:  # if at least one motor step
-                # is required for this move.
+def move_x(serial_port, x_dest, speed):
+    move_xy(serial_port, x_dest, 0, speed)
 
-                motor_dist1_temp = float(move_steps1) / (StepScaleFactor * 2.0)
-                motor_dist2_temp = float(move_steps2) / (StepScaleFactor * 2.0)
-
-                # Convert back to find the actual X & Y distances that will be moved:
-                # X Distance moved in this subsegment, in inchse
-                x_delta = (motor_dist1_temp + motor_dist2_temp)
-                # Y Distance moved in this subsegment,
-                y_delta = (motor_dist1_temp - motor_dist2_temp)
-
-                f_new_x = f_curr_x + x_delta
-                f_new_y = f_curr_y + y_delta
-                print_info('Command:', move_steps2, move_steps1, move_time)
-                doXYMove(serial_port, move_steps2, move_steps1, move_time)
-                if move_time > 50:
-                    # print('sleep time', float(move_time - 10) / 1000.0)
-                    time.sleep(float(move_time - 10) / 1000.0)  # pause before issuing next command
-
-                f_curr_x = f_new_x  # Update current position
-                f_curr_y = f_new_y
 
 def move_y(serial_port, y_dest, speed):
+    move_xy(serial_port, 0, y_dest, speed)
+
+
+def move_circular(serial_port, speed_cm, radius_cm, rep, direction):
+    """Optimized circular movement sequence."""
+    speed_inches = speed_cm / 2.54
+    perimeter = 2 * math.pi * radius_cm
+    lap_time = round(perimeter / speed_cm) if speed_cm > 0 else 100
+
+    for _ in range(rep):
+        for k in range(360):
+            delta = math.radians(k)
+            factor = radius_cm * math.sin(math.radians(1))
+
+            x_dest = (factor * math.cos(delta)) / 2.54
+            y_dest = (factor * math.sin(delta)) / 2.54
+
+            if direction == "ACW":
+                x_dest = -x_dest
+
+            _execute_trajectory(serial_port, x_dest, y_dest, speed_inches, pen_up=False, custom_time=lap_time)
+
+
+def doOval(serial_port, theta, speed_cm, radius_x_cm, radius_y_cm):
     """
-    Move the pen in the x direction for a given distance and speed.
-    Speed and distance in centimeters.
-    :param serial_port: COM PORT
-    :param x_dest: target distance (in cm)
-    :param speed: target speed (in cm/s)
+    Draws a single step of an oval (ellipse) path for angle theta.
     """
-    y_dest /= 2.54
-    speed /= 2.54
-    x_dest, v_i, v_f = 0, 0, 0
-    # print_info(f'Brushing to {y_dest} with speed {speed}')
-    # print(f'Brushing to {y_dest} with speed {speed}')
+    speed_inches = speed_cm / 2.54
+    delta = math.radians(theta)
 
-    f_curr_x, f_curr_y = 0, 0
-    delta_x_inches = x_dest - f_curr_x
-    delta_y_inches = y_dest - f_curr_y
+    # Parametric ellipse equations converted to inches (using 1-degree increment factor scaling like circle)
+    factor_x = radius_x_cm * math.sin(math.radians(1))
+    factor_y = radius_y_cm * math.sin(math.radians(1))
 
-    # Velocity inputs; clarify units.
-    vi_inches_per_sec = v_i
-    vf_inches_per_sec = v_f
+    x_dest = (factor_x * math.cos(delta)) / 2.54
+    y_dest = (factor_y * math.sin(delta)) / 2.54
 
-    # Distance in inches that the motor+belt must turn through at Motor 1 and 2
-    motor_dist1 = delta_x_inches + delta_y_inches
-    motor_dist2 = delta_x_inches - delta_y_inches
+    # Approximate oval perimeter using Ramanujan's approximation for lap time calculation
+    h = ((radius_x_cm - radius_y_cm) ** 2) / ((radius_x_cm + radius_y_cm) ** 2) if (radius_x_cm + radius_y_cm) > 0 else 0
+    oval_perimeter = math.pi * (radius_x_cm + radius_y_cm) * (1 + (3 * h) / (10 + math.sqrt(4 - 3 * h)))
+    lap_time = round(oval_perimeter / speed_cm) if speed_cm > 0 else 100
 
-    # Look at distance to move along 45-degree axes, for native motor steps: Recall that StepScaleFactor gives a
-    # scaling factor for converting from inches to steps. It is *not* the native resolution StepScaleFactor is Either
-    # 1016 or 2032, for 8X or 16X microstepping, respectively.
+    _execute_trajectory(serial_port, x_dest, y_dest, speed_inches, pen_up=False, custom_time=lap_time)
 
-    # resolution = 1 # 16x microstepping
-    resolution = 2  # 8x microstepping
-    print_info('Using resolution value of', resolution)
 
-    if resolution == 2:
-        StepScaleFactor = 1016.0
-    else:
-        StepScaleFactor = 1016.0 * 2  # Value from variable NativeResFactor in axidraw_conf.py
+def move_oval(serial_port, speed_cm, radius_x_cm, radius_y_cm, rep):
+    """
+    Full repetition loop for drawing an oval.
+    """
+    for _ in range(rep):
+        for k in range(360):
+            doOval(serial_port, k, speed_cm, radius_x_cm, radius_y_cm)
 
-    # Round the requested motion to the nearest motor step.
-    motor_steps1 = int(round(StepScaleFactor * motor_dist1))
-    motor_steps2 = int(round(StepScaleFactor * motor_dist2))
-
-    # Since we are rounding, we need to keep track of the actual distance moved,
-    # not just the _requested_ distance to move.
-
-    motor_dist1_rounded = float(motor_steps1) / (2.0 * StepScaleFactor)
-    motor_dist2_rounded = float(motor_steps2) / (2.0 * StepScaleFactor)
-
-    # Convert back to find the actual X & Y distances that will be moved:
-    delta_x_inches_rounded = (motor_dist1_rounded + motor_dist2_rounded)
-    delta_y_inches_rounded = (motor_dist1_rounded - motor_dist2_rounded)
-
-    # If total movement is less than one step, skip this movement.
-    if abs(motor_steps1) < 1 and abs(motor_steps2) < 1:
-        print('Total movement less than one step, skipping this movement')
-
-    segment_length_inches = distance(delta_x_inches_rounded, delta_y_inches_rounded)
-
-    # From axidraw_conf
-    PenUpSpeed = 100  # Default pen-up speed (%).   Range: 1 - 110 %
-    PenDownSpeed = 100  # 25 # Default pen-down speed (%). Range: 1 - 110 %
-    SpeedLimXY_LR = 1  # 12.000 # Maximum XY speed allowed when in Low Resolution
-    #                        # mode, in inches per second. Default: 12.000 Max:
-    #                        # 17.3958
-
-    SpeedLimXY_HR = 3  # 8.6979 # Maximum XY speed allowed when in High Resolution
-    #                        # mode, in inches per second. Default: 8.6979, Max:
-    #                        # 8.6979 Do not increase these values above Max;
-    #                        # they are derived from MaxStepRate and the
-    #                        # resolution.
-    # SpeedLimXY_LR = speed
-    # SpeedLimXY_HR = speed
-    # Acceleration & Deceleration rates:
-    AccelRate = 100  # 40.0    # Standard acceleration rate, inches per second squared
-    AccelRatePU = 60.0  # Pen-up acceleration rate, inches per second squared
-    accel = 100  # 50              # Acceleration rate factor (1-100)
-    TimeSlice = 0.025  # Interval, in seconds, of when to update the
-    # motors. Default: TimeSlice = 0.025 (25 ms)
-    MaxStepRate = 24.995  # Maximum allowed motor step rate, in steps per millisecond.
-    # Note that 25 kHz is the absolute maximum step rate for the EBB.
-    # Movement commands faster than this are ignored; may result in a crash (loss of position control).
-    # We use a conservative value, to help prevent errors due to rounding.
-    # This value is normally used _for speed limit checking only_.
-
-    speed_pendown = PenDownSpeed * SpeedLimXY_HR / 110.0  # Speed given as
-    # maximum inches/second
-    # in XY plane
-    speed_penup = PenUpSpeed * SpeedLimXY_HR / 110.0  # Speed given as
-    # maximum
-    # inches/second in XY
-    # plane
-
-    # Note: The value of `accel`, in the Inkscape extension, depends on the
-    # timing parameter "Acceleration"
-
-    # <param indent="1" name="accelFactor" type="optiongroup"
-    # appearance="minimal" _gui-text="Acceleration :">
-    # <_option value="50">Standard</_option>
-    # <_option value="100">Maximum</_option>
-    # <_option value="75">High</_option>
-    # <_option value="35">Slow</_option>
-    # <_option value="10">Very slow</_option>
-    # </param>
-
-    pen_up = False
-    if pen_up:
-        speed_limit = speed_penup
-    else:
-        speed_limit = speed_pendown
-
-    # Acceleration/deceleration rates:
-    if pen_up:
-        accel_rate = AccelRatePU * accel / 100.0
-    else:
-        accel_rate = AccelRate * accel / 100.0
-
-    # Maximum acceleration time: Time needed to accelerate from full stop to
-    # maximum speed: v = a * t, so t_max = vMax / a
-    t_max = speed_limit / accel_rate
-
-    # Distance that is required to reach full speed, from zero speed:  x = 1/2 a t^2
-    accel_dist = 0.5 * accel_rate * t_max * t_max
-
-    if vi_inches_per_sec > speed_limit:
-        vi_inches_per_sec = speed_limit
-    if vf_inches_per_sec > speed_limit:
-        vf_inches_per_sec = speed_limit
-
-    # Times to reach maximum speed, from our initial velocity
-    # vMax = vi + a*t  =>  t = (vMax - vi)/a
-    # vf = vMax - a*t   =>  t = -(vf - vMax)/a = (vMax - vf)/a
-    # -- These are _maximum_ values. We often do not have enough time/space to reach full speed.
-
-    t_accel_max = (speed_limit - vi_inches_per_sec) / accel_rate
-    t_decel_max = (speed_limit - vf_inches_per_sec) / accel_rate
-    # Distance that is required to reach full speed, from our start at speed vi_inches_per_sec:
-    # distance = vi * t + (1/2) a t^2
-    accel_dist_max = (vi_inches_per_sec * t_accel_max) + (0.5 * accel_rate * t_accel_max * t_accel_max)
-    # Use the same model for deceleration distance; modeling it with backwards motion:
-    decel_dist_max = (vf_inches_per_sec * t_decel_max) + (0.5 * accel_rate * t_decel_max * t_decel_max)
-
-    # time slices: Slice travel into intervals that are (say) 30 ms long.
-    time_slice = TimeSlice  # Default slice intervals
-
-    # Declare arrays: These are _normally_ 4-byte integers, but could
-    # (theoretically) be 2-byte integers on some systems.  if so, this could
-    # cause errors in rare cases (very large/long moves, etc.).  Set up an
-    # alert system, just in case!
-
-    duration_array = array('I')  # unsigned integer for duration -- up to
-    # 65 seconds for a move if only 2 bytes.
-    dist_array = array('f')  # float
-    dest_array1 = array('i')  # signed integer
-    dest_array2 = array('i')  # signed integer
-
-    time_elapsed = 0.0
-    position = 0.0
-    velocity = vi_inches_per_sec
-    speed_max = speed_limit  # We will reach _full cruising speed_!
-
-    intervals = int(math.floor(t_accel_max / time_slice))  # Number of intervals during acceleration
-
-    # If intervals == 0, then we are already at (or nearly at) full speed.
-    if intervals > 0:
-        time_per_interval = t_accel_max / intervals
-
-        velocity_step_size = (speed_max - vi_inches_per_sec) / (intervals + 1.0)
-        # For six time intervals of acceleration, first interval is at velocity (max/7)
-        # 6th (last) time interval is at 6*max/7
-        # after this interval, we are at full speed.
-
-        for index in range(0, intervals):  # Calculate acceleration phase
-            velocity += velocity_step_size
-            time_elapsed += time_per_interval
-            position += velocity * time_per_interval
-            duration_array.append(int(round(time_elapsed * 1000.0)))
-            dist_array.append(position)  # Estimated distance along direction of travel
-
-            # Add a center "coasting" speed interval IF there is time for it.
-        coasting_distance = segment_length_inches - (accel_dist_max + decel_dist_max)
-
-        if coasting_distance > (time_slice * speed_max):
-            # There is enough time for (at least) one interval at full cruising speed.
-            velocity = speed  # speed_max
-            cruising_time = coasting_distance / velocity
-            time_elapsed += cruising_time
-            duration_array.append(int(round(time_elapsed * 1000.0)))
-            position += velocity * cruising_time
-            dist_array.append(position)  # Estimated distance along direction of travel
-
-        # Number of intervals during deceleration
-        intervals = int(math.floor(t_decel_max / time_slice))
-
-        time_per_interval = t_decel_max / intervals
-        velocity_step_size = (speed_max - vf_inches_per_sec) / (intervals + 1.0)
-
-        for index in range(0, intervals):  # Calculate deceleration phase
-            velocity -= velocity_step_size
-            time_elapsed += time_per_interval
-            position += velocity * time_per_interval
-            duration_array.append(int(round(time_elapsed * 1000.0)))
-            dist_array.append(position)  # Estimated distance along direction of travel
-        """
-        The time & distance motion arrays for this path segment are now computed.
-        Next: We scale to the correct intended travel distance,
-        round into integer motor steps and manage the process
-        of sending the output commands to the motors.
-        """
-        for index in range(0, len(dist_array)):
-            # Scale our trajectory to the "actual" travel distance that we need:
-            # Fractional position along the intended path
-            fractional_distance = dist_array[index] / position
-            dest_array1.append(int(round(fractional_distance * motor_steps1)))
-            dest_array2.append(int(round(fractional_distance * motor_steps2)))
-
-        sum(dest_array1)
-        prev_motor1 = 0
-        prev_motor2 = 0
-        prev_time = 0
-
-        for index in range(0, len(dest_array1)):
-            move_steps1 = dest_array1[index] - prev_motor1
-            move_steps2 = dest_array2[index] - prev_motor2
-            move_time = duration_array[index] - prev_time
-            prev_time = duration_array[index]
-
-            if move_time < 1:
-                move_time = 1  # don't allow zero-time moves.
-
-            if abs(float(move_steps1) / float(move_time)) < 0.002:
-                move_steps1 = 0  # don't allow too-slow movements of this axis
-            if abs(float(move_steps2) / float(move_time)) < 0.002:
-                move_steps2 = 0  # don't allow too-slow movements of this axis
-
-            # Don't allow too fast movements of either axis: Catch rounding errors
-            # that could cause an overspeed event
-            while ((abs(float(move_steps1) / float(move_time)) >= MaxStepRate)
-                   or (abs(float(move_steps2) / float(move_time)) >= MaxStepRate)):
-                move_time += 1
-
-            prev_motor1 += move_steps1
-            prev_motor2 += move_steps2
-
-            if move_steps1 != 0 or move_steps2 != 0:  # if at least one motor step
-                # is required for this move.
-
-                motor_dist1_temp = float(move_steps1) / (StepScaleFactor * 2.0)
-                motor_dist2_temp = float(move_steps2) / (StepScaleFactor * 2.0)
-
-                # Convert back to find the actual X & Y distances that will be moved:
-                # X Distance moved in this subsegment, in inchse
-                x_delta = (motor_dist1_temp + motor_dist2_temp)
-                # Y Distance moved in this subsegment,
-                y_delta = (motor_dist1_temp - motor_dist2_temp)
-
-                f_new_x = f_curr_x + x_delta
-                f_new_y = f_curr_y + y_delta
-                print_info('Command:', move_steps2, move_steps1, move_time)
-                doXYMove(serial_port, move_steps2, move_steps1, move_time)
-                if move_time > 50:
-                    # print('sleep time', float(move_time - 10) / 1000.0)
-                    time.sleep(float(move_time - 10) / 1000.0)  # pause before issuing next command
-
-                f_curr_x = f_new_x  # Update current position
-                f_curr_y = f_new_y
+# def move_x(serial_port, x_dest, speed):
+#     """
+#     Move the pen in the x direction for a given distance and speed.
+#     Speed and distance in centimeters.
+#     :param serial_port: COM PORT
+#     :param x_dest: target distance (in cm)
+#     :param speed: target speed (in cm/s)
+#     """
+#     x_dest /= 2.54
+#     speed /= 2.54
+#     y_dest, v_i, v_f = 0, 0, 0
+#     print_info(f'Brushing to {x_dest} with speed {speed}')
+#
+#     f_curr_x, f_curr_y = 0, 0
+#     delta_x_inches = x_dest - f_curr_x
+#     delta_y_inches = y_dest - f_curr_y
+#
+#     # print(delta_x_inches, delta_y_inches)
+#
+#     # Velocity inputs; clarify units.
+#     vi_inches_per_sec = v_i
+#     vf_inches_per_sec = v_f
+#
+#     # Distance in inches that the motor+belt must turn through at Motor 1 and 2
+#     motor_dist1 = delta_x_inches + delta_y_inches
+#     motor_dist2 = delta_x_inches - delta_y_inches
+#
+#     # Look at distance to move along 45-degree axes, for native motor steps: Recall that StepScaleFactor gives a
+#     # scaling factor for converting from inches to steps. It is *not* the native resolution StepScaleFactor is Either
+#     # 1016 or 2032, for 8X or 16X microstepping, respectively.
+#
+#     # resolution = 1 # 16x microstepping
+#     resolution = 2  # 8x microstepping
+#     print_info('Using resolution value of', resolution)
+#
+#     if resolution == 2:
+#         StepScaleFactor = 1016.0
+#     else:
+#         StepScaleFactor = 1016.0 * 2  # Value from variable NativeResFactor in axidraw_conf.py
+#
+#     # Round the requested motion to the nearest motor step.
+#     motor_steps1 = int(round(StepScaleFactor * motor_dist1))
+#     motor_steps2 = int(round(StepScaleFactor * motor_dist2))
+#
+#     # Since we are rounding, we need to keep track of the actual distance moved,
+#     # not just the _requested_ distance to move.
+#
+#     motor_dist1_rounded = float(motor_steps1) / (2.0 * StepScaleFactor)
+#     motor_dist2_rounded = float(motor_steps2) / (2.0 * StepScaleFactor)
+#
+#     # Convert back to find the actual X & Y distances that will be moved:
+#     delta_x_inches_rounded = (motor_dist1_rounded + motor_dist2_rounded)
+#     delta_y_inches_rounded = (motor_dist1_rounded - motor_dist2_rounded)
+#
+#     # If total movement is less than one step, skip this movement.
+#     if abs(motor_steps1) < 1 and abs(motor_steps2) < 1:
+#         print('Total movement less than one step, skipping this movement')
+#
+#     segment_length_inches = distance(delta_x_inches_rounded, delta_y_inches_rounded)
+#
+#     # From axidraw_conf
+#     PenUpSpeed = 100  # Default pen-up speed (%).   Range: 1 - 110 %
+#     PenDownSpeed = 100  # 25 # Default pen-down speed (%). Range: 1 - 110 %
+#     SpeedLimXY_LR = 1  # 12.000 # Maximum XY speed allowed when in Low Resolution
+#     #                        # mode, in inches per second. Default: 12.000 Max:
+#     #                        # 17.3958
+#
+#     SpeedLimXY_HR = 3  # 8.6979 # Maximum XY speed allowed when in High Resolution
+#     #                        # mode, in inches per second. Default: 8.6979, Max:
+#     #                        # 8.6979 Do not increase these values above Max;
+#     #                        # they are derived from MaxStepRate and the
+#     #                        # resolution.
+#     # SpeedLimXY_LR = speed
+#     # SpeedLimXY_HR = speed
+#     # Acceleration & Deceleration rates:
+#     AccelRate = 100  # 40.0    # Standard acceleration rate, inches per second squared
+#     AccelRatePU = 60.0  # Pen-up acceleration rate, inches per second squared
+#     accel = 100  # 50              # Acceleration rate factor (1-100)
+#     TimeSlice = 0.025  # Interval, in seconds, of when to update the
+#     # motors. Default: TimeSlice = 0.025 (25 ms)
+#     MaxStepRate = 24.995  # Maximum allowed motor step rate, in steps per millisecond.
+#     # Note that 25 kHz is the absolute maximum step rate for the EBB.
+#     # Movement commands faster than this are ignored; may result in a crash (loss of position control).
+#     # We use a conservative value, to help prevent errors due to rounding.
+#     # This value is normally used _for speed limit checking only_.
+#
+#     speed_pendown = PenDownSpeed * SpeedLimXY_HR / 110.0  # Speed given as
+#     # maximum inches/second
+#     # in XY plane
+#     speed_penup = PenUpSpeed * SpeedLimXY_HR / 110.0  # Speed given as
+#     # maximum
+#     # inches/second in XY
+#     # plane
+#
+#     # Note: The value of `accel`, in the Inkscape extension, depends on the
+#     # timing parameter "Acceleration"
+#
+#     # <param indent="1" name="accelFactor" type="optiongroup"
+#     # appearance="minimal" _gui-text="Acceleration :">
+#     # <_option value="50">Standard</_option>
+#     # <_option value="100">Maximum</_option>
+#     # <_option value="75">High</_option>
+#     # <_option value="35">Slow</_option>
+#     # <_option value="10">Very slow</_option>
+#     # </param>
+#
+#     pen_up = False
+#     if pen_up:
+#         speed_limit = speed_penup
+#     else:
+#         speed_limit = speed_pendown
+#
+#     # Acceleration/deceleration rates:
+#     if pen_up:
+#         accel_rate = AccelRatePU * accel / 100.0
+#     else:
+#         accel_rate = AccelRate * accel / 100.0
+#
+#     # Maximum acceleration time: Time needed to accelerate from full stop to
+#     # maximum speed: v = a * t, so t_max = vMax / a
+#     t_max = speed_limit / accel_rate
+#
+#     # Distance that is required to reach full speed, from zero speed:  x = 1/2 a t^2
+#     accel_dist = 0.5 * accel_rate * t_max * t_max
+#
+#     if vi_inches_per_sec > speed_limit:
+#         vi_inches_per_sec = speed_limit
+#     if vf_inches_per_sec > speed_limit:
+#         vf_inches_per_sec = speed_limit
+#
+#     # Times to reach maximum speed, from our initial velocity
+#     # vMax = vi + a*t  =>  t = (vMax - vi)/a
+#     # vf = vMax - a*t   =>  t = -(vf - vMax)/a = (vMax - vf)/a
+#     # -- These are _maximum_ values. We often do not have enough time/space to reach full speed.
+#
+#     t_accel_max = (speed_limit - vi_inches_per_sec) / accel_rate
+#     t_decel_max = (speed_limit - vf_inches_per_sec) / accel_rate
+#     # Distance that is required to reach full speed, from our start at speed vi_inches_per_sec:
+#     # distance = vi * t + (1/2) a t^2
+#     accel_dist_max = (vi_inches_per_sec * t_accel_max) + (0.5 * accel_rate * t_accel_max * t_accel_max)
+#     # Use the same model for deceleration distance; modeling it with backwards motion:
+#     decel_dist_max = (vf_inches_per_sec * t_decel_max) + (0.5 * accel_rate * t_decel_max * t_decel_max)
+#
+#     # time slices: Slice travel into intervals that are (say) 30 ms long.
+#     time_slice = TimeSlice  # Default slice intervals
+#
+#     # Declare arrays: These are _normally_ 4-byte integers, but could
+#     # (theoretically) be 2-byte integers on some systems.  if so, this could
+#     # cause errors in rare cases (very large/long moves, etc.).  Set up an
+#     # alert system, just in case!
+#
+#     duration_array = array('I')  # unsigned integer for duration -- up to
+#     # 65 seconds for a move if only 2 bytes.
+#     dist_array = array('f')  # float
+#     dest_array1 = array('i')  # signed integer
+#     dest_array2 = array('i')  # signed integer
+#
+#     time_elapsed = 0.0
+#     position = 0.0
+#     velocity = vi_inches_per_sec
+#     speed_max = speed_limit  # We will reach _full cruising speed_!
+#
+#     intervals = int(math.floor(t_accel_max / time_slice))  # Number of intervals during acceleration
+#
+#     # If intervals == 0, then we are already at (or nearly at) full speed.
+#     if intervals > 0:
+#         time_per_interval = t_accel_max / intervals
+#
+#         velocity_step_size = (speed_max - vi_inches_per_sec) / (intervals + 1.0)
+#         # For six time intervals of acceleration, first interval is at velocity (max/7)
+#         # 6th (last) time interval is at 6*max/7
+#         # after this interval, we are at full speed.
+#
+#         for index in range(0, intervals):  # Calculate acceleration phase
+#             velocity += velocity_step_size
+#             time_elapsed += time_per_interval
+#             position += velocity * time_per_interval
+#             duration_array.append(int(round(time_elapsed * 1000.0)))
+#             dist_array.append(position)  # Estimated distance along direction of travel
+#
+#             # Add a center "coasting" speed interval IF there is time for it.
+#         coasting_distance = segment_length_inches - (accel_dist_max + decel_dist_max)
+#
+#         if coasting_distance > (time_slice * speed_max):
+#             # There is enough time for (at least) one interval at full cruising speed.
+#             velocity = speed  # speed_max
+#             cruising_time = coasting_distance / velocity
+#             time_elapsed += cruising_time
+#             duration_array.append(int(round(time_elapsed * 1000.0)))
+#             position += velocity * cruising_time
+#             dist_array.append(position)  # Estimated distance along direction of travel
+#
+#         # Number of intervals during deceleration
+#         intervals = int(math.floor(t_decel_max / time_slice))
+#
+#         time_per_interval = t_decel_max / intervals
+#         velocity_step_size = (speed_max - vf_inches_per_sec) / (intervals + 1.0)
+#
+#         for index in range(0, intervals):  # Calculate deceleration phase
+#             velocity -= velocity_step_size
+#             time_elapsed += time_per_interval
+#             position += velocity * time_per_interval
+#             duration_array.append(int(round(time_elapsed * 1000.0)))
+#             dist_array.append(position)  # Estimated distance along direction of travel
+#         """
+#         The time & distance motion arrays for this path segment are now computed.
+#         Next: We scale to the correct intended travel distance,
+#         round into integer motor steps and manage the process
+#         of sending the output commands to the motors.
+#         """
+#         for index in range(0, len(dist_array)):
+#             # Scale our trajectory to the "actual" travel distance that we need:
+#             # Fractional position along the intended path
+#             fractional_distance = dist_array[index] / position
+#             dest_array1.append(int(round(fractional_distance * motor_steps1)))
+#             dest_array2.append(int(round(fractional_distance * motor_steps2)))
+#             print(dest_array1)
+#             print(dest_array2)
+#
+#         sum(dest_array1)
+#         prev_motor1 = 0
+#         prev_motor2 = 0
+#         prev_time = 0
+#
+#         for index in range(0, len(dest_array1)):
+#             move_steps1 = dest_array1[index] - prev_motor1
+#             move_steps2 = dest_array2[index] - prev_motor2
+#             move_time = duration_array[index] - prev_time
+#             prev_time = duration_array[index]
+#
+#             if move_time < 1:
+#                 move_time = 1  # don't allow zero-time moves.
+#
+#             if abs(float(move_steps1) / float(move_time)) < 0.002:
+#                 move_steps1 = 0  # don't allow too-slow movements of this axis
+#             if abs(float(move_steps2) / float(move_time)) < 0.002:
+#                 move_steps2 = 0  # don't allow too-slow movements of this axis
+#
+#             # Don't allow too fast movements of either axis: Catch rounding errors
+#             # that could cause an overspeed event
+#             while ((abs(float(move_steps1) / float(move_time)) >= MaxStepRate)
+#                    or (abs(float(move_steps2) / float(move_time)) >= MaxStepRate)):
+#                 move_time += 1
+#
+#             prev_motor1 += move_steps1
+#             prev_motor2 += move_steps2
+#
+#             print(prev_motor1, prev_motor2)
+#
+#             if move_steps1 != 0 or move_steps2 != 0:  # if at least one motor step
+#                 # is required for this move.
+#
+#                 motor_dist1_temp = float(move_steps1) / (StepScaleFactor * 2.0)
+#                 motor_dist2_temp = float(move_steps2) / (StepScaleFactor * 2.0)
+#
+#                 # Convert back to find the actual X & Y distances that will be moved:
+#                 # X Distance moved in this subsegment, in inchse
+#                 x_delta = (motor_dist1_temp + motor_dist2_temp)
+#                 # Y Distance moved in this subsegment,
+#                 y_delta = (motor_dist1_temp - motor_dist2_temp)
+#
+#                 f_new_x = f_curr_x + x_delta
+#                 f_new_y = f_curr_y + y_delta
+#                 print_info('Command:', move_steps2, move_steps1, move_time)
+#                 doXYMove(serial_port, move_steps2, move_steps1, move_time)
+#                 if move_time > 50:
+#                     # print('sleep time', float(move_time - 10) / 1000.0)
+#                     time.sleep(float(move_time - 10) / 1000.0)  # pause before issuing next command
+#
+#                 f_curr_x = f_new_x  # Update current position
+#                 f_curr_y = f_new_y
+#
+# def move_y(serial_port, y_dest, speed):
+#     """
+#     Move the pen in the x direction for a given distance and speed.
+#     Speed and distance in centimeters.
+#     :param serial_port: COM PORT
+#     :param x_dest: target distance (in cm)
+#     :param speed: target speed (in cm/s)
+#     """
+#     y_dest /= 2.54
+#     speed /= 2.54
+#     x_dest, v_i, v_f = 0, 0, 0
+#     # print_info(f'Brushing to {y_dest} with speed {speed}')
+#     # print(f'Brushing to {y_dest} with speed {speed}')
+#
+#     f_curr_x, f_curr_y = 0, 0
+#     delta_x_inches = x_dest - f_curr_x
+#     delta_y_inches = y_dest - f_curr_y
+#
+#     # Velocity inputs; clarify units.
+#     vi_inches_per_sec = v_i
+#     vf_inches_per_sec = v_f
+#
+#     # Distance in inches that the motor+belt must turn through at Motor 1 and 2
+#     motor_dist1 = delta_x_inches + delta_y_inches
+#     motor_dist2 = delta_x_inches - delta_y_inches
+#
+#     # Look at distance to move along 45-degree axes, for native motor steps: Recall that StepScaleFactor gives a
+#     # scaling factor for converting from inches to steps. It is *not* the native resolution StepScaleFactor is Either
+#     # 1016 or 2032, for 8X or 16X microstepping, respectively.
+#
+#     # resolution = 1 # 16x microstepping
+#     resolution = 2  # 8x microstepping
+#     print_info('Using resolution value of', resolution)
+#
+#     if resolution == 2:
+#         StepScaleFactor = 1016.0
+#     else:
+#         StepScaleFactor = 1016.0 * 2  # Value from variable NativeResFactor in axidraw_conf.py
+#
+#     # Round the requested motion to the nearest motor step.
+#     motor_steps1 = int(round(StepScaleFactor * motor_dist1))
+#     motor_steps2 = int(round(StepScaleFactor * motor_dist2))
+#
+#     # Since we are rounding, we need to keep track of the actual distance moved,
+#     # not just the _requested_ distance to move.
+#
+#     motor_dist1_rounded = float(motor_steps1) / (2.0 * StepScaleFactor)
+#     motor_dist2_rounded = float(motor_steps2) / (2.0 * StepScaleFactor)
+#
+#     # Convert back to find the actual X & Y distances that will be moved:
+#     delta_x_inches_rounded = (motor_dist1_rounded + motor_dist2_rounded)
+#     delta_y_inches_rounded = (motor_dist1_rounded - motor_dist2_rounded)
+#
+#     # If total movement is less than one step, skip this movement.
+#     if abs(motor_steps1) < 1 and abs(motor_steps2) < 1:
+#         print('Total movement less than one step, skipping this movement')
+#
+#     segment_length_inches = distance(delta_x_inches_rounded, delta_y_inches_rounded)
+#
+#     # From axidraw_conf
+#     PenUpSpeed = 100  # Default pen-up speed (%).   Range: 1 - 110 %
+#     PenDownSpeed = 100  # 25 # Default pen-down speed (%). Range: 1 - 110 %
+#     SpeedLimXY_LR = 1  # 12.000 # Maximum XY speed allowed when in Low Resolution
+#     #                        # mode, in inches per second. Default: 12.000 Max:
+#     #                        # 17.3958
+#
+#     SpeedLimXY_HR = 3  # 8.6979 # Maximum XY speed allowed when in High Resolution
+#     #                        # mode, in inches per second. Default: 8.6979, Max:
+#     #                        # 8.6979 Do not increase these values above Max;
+#     #                        # they are derived from MaxStepRate and the
+#     #                        # resolution.
+#     # SpeedLimXY_LR = speed
+#     # SpeedLimXY_HR = speed
+#     # Acceleration & Deceleration rates:
+#     AccelRate = 100  # 40.0    # Standard acceleration rate, inches per second squared
+#     AccelRatePU = 60.0  # Pen-up acceleration rate, inches per second squared
+#     accel = 100  # 50              # Acceleration rate factor (1-100)
+#     TimeSlice = 0.025  # Interval, in seconds, of when to update the
+#     # motors. Default: TimeSlice = 0.025 (25 ms)
+#     MaxStepRate = 24.995  # Maximum allowed motor step rate, in steps per millisecond.
+#     # Note that 25 kHz is the absolute maximum step rate for the EBB.
+#     # Movement commands faster than this are ignored; may result in a crash (loss of position control).
+#     # We use a conservative value, to help prevent errors due to rounding.
+#     # This value is normally used _for speed limit checking only_.
+#
+#     speed_pendown = PenDownSpeed * SpeedLimXY_HR / 110.0  # Speed given as
+#     # maximum inches/second
+#     # in XY plane
+#     speed_penup = PenUpSpeed * SpeedLimXY_HR / 110.0  # Speed given as
+#     # maximum
+#     # inches/second in XY
+#     # plane
+#
+#     # Note: The value of `accel`, in the Inkscape extension, depends on the
+#     # timing parameter "Acceleration"
+#
+#     # <param indent="1" name="accelFactor" type="optiongroup"
+#     # appearance="minimal" _gui-text="Acceleration :">
+#     # <_option value="50">Standard</_option>
+#     # <_option value="100">Maximum</_option>
+#     # <_option value="75">High</_option>
+#     # <_option value="35">Slow</_option>
+#     # <_option value="10">Very slow</_option>
+#     # </param>
+#
+#     pen_up = False
+#     if pen_up:
+#         speed_limit = speed_penup
+#     else:
+#         speed_limit = speed_pendown
+#
+#     # Acceleration/deceleration rates:
+#     if pen_up:
+#         accel_rate = AccelRatePU * accel / 100.0
+#     else:
+#         accel_rate = AccelRate * accel / 100.0
+#
+#     # Maximum acceleration time: Time needed to accelerate from full stop to
+#     # maximum speed: v = a * t, so t_max = vMax / a
+#     t_max = speed_limit / accel_rate
+#
+#     # Distance that is required to reach full speed, from zero speed:  x = 1/2 a t^2
+#     accel_dist = 0.5 * accel_rate * t_max * t_max
+#
+#     if vi_inches_per_sec > speed_limit:
+#         vi_inches_per_sec = speed_limit
+#     if vf_inches_per_sec > speed_limit:
+#         vf_inches_per_sec = speed_limit
+#
+#     # Times to reach maximum speed, from our initial velocity
+#     # vMax = vi + a*t  =>  t = (vMax - vi)/a
+#     # vf = vMax - a*t   =>  t = -(vf - vMax)/a = (vMax - vf)/a
+#     # -- These are _maximum_ values. We often do not have enough time/space to reach full speed.
+#
+#     t_accel_max = (speed_limit - vi_inches_per_sec) / accel_rate
+#     t_decel_max = (speed_limit - vf_inches_per_sec) / accel_rate
+#     # Distance that is required to reach full speed, from our start at speed vi_inches_per_sec:
+#     # distance = vi * t + (1/2) a t^2
+#     accel_dist_max = (vi_inches_per_sec * t_accel_max) + (0.5 * accel_rate * t_accel_max * t_accel_max)
+#     # Use the same model for deceleration distance; modeling it with backwards motion:
+#     decel_dist_max = (vf_inches_per_sec * t_decel_max) + (0.5 * accel_rate * t_decel_max * t_decel_max)
+#
+#     # time slices: Slice travel into intervals that are (say) 30 ms long.
+#     time_slice = TimeSlice  # Default slice intervals
+#
+#     # Declare arrays: These are _normally_ 4-byte integers, but could
+#     # (theoretically) be 2-byte integers on some systems.  if so, this could
+#     # cause errors in rare cases (very large/long moves, etc.).  Set up an
+#     # alert system, just in case!
+#
+#     duration_array = array('I')  # unsigned integer for duration -- up to
+#     # 65 seconds for a move if only 2 bytes.
+#     dist_array = array('f')  # float
+#     dest_array1 = array('i')  # signed integer
+#     dest_array2 = array('i')  # signed integer
+#
+#     time_elapsed = 0.0
+#     position = 0.0
+#     velocity = vi_inches_per_sec
+#     speed_max = speed_limit  # We will reach _full cruising speed_!
+#
+#     intervals = int(math.floor(t_accel_max / time_slice))  # Number of intervals during acceleration
+#
+#     # If intervals == 0, then we are already at (or nearly at) full speed.
+#     if intervals > 0:
+#         time_per_interval = t_accel_max / intervals
+#
+#         velocity_step_size = (speed_max - vi_inches_per_sec) / (intervals + 1.0)
+#         # For six time intervals of acceleration, first interval is at velocity (max/7)
+#         # 6th (last) time interval is at 6*max/7
+#         # after this interval, we are at full speed.
+#
+#         for index in range(0, intervals):  # Calculate acceleration phase
+#             velocity += velocity_step_size
+#             time_elapsed += time_per_interval
+#             position += velocity * time_per_interval
+#             duration_array.append(int(round(time_elapsed * 1000.0)))
+#             dist_array.append(position)  # Estimated distance along direction of travel
+#
+#             # Add a center "coasting" speed interval IF there is time for it.
+#         coasting_distance = segment_length_inches - (accel_dist_max + decel_dist_max)
+#
+#         if coasting_distance > (time_slice * speed_max):
+#             # There is enough time for (at least) one interval at full cruising speed.
+#             velocity = speed  # speed_max
+#             cruising_time = coasting_distance / velocity
+#             time_elapsed += cruising_time
+#             duration_array.append(int(round(time_elapsed * 1000.0)))
+#             position += velocity * cruising_time
+#             dist_array.append(position)  # Estimated distance along direction of travel
+#
+#         # Number of intervals during deceleration
+#         intervals = int(math.floor(t_decel_max / time_slice))
+#
+#         time_per_interval = t_decel_max / intervals
+#         velocity_step_size = (speed_max - vf_inches_per_sec) / (intervals + 1.0)
+#
+#         for index in range(0, intervals):  # Calculate deceleration phase
+#             velocity -= velocity_step_size
+#             time_elapsed += time_per_interval
+#             position += velocity * time_per_interval
+#             duration_array.append(int(round(time_elapsed * 1000.0)))
+#             dist_array.append(position)  # Estimated distance along direction of travel
+#         """
+#         The time & distance motion arrays for this path segment are now computed.
+#         Next: We scale to the correct intended travel distance,
+#         round into integer motor steps and manage the process
+#         of sending the output commands to the motors.
+#         """
+#         for index in range(0, len(dist_array)):
+#             # Scale our trajectory to the "actual" travel distance that we need:
+#             # Fractional position along the intended path
+#             fractional_distance = dist_array[index] / position
+#             dest_array1.append(int(round(fractional_distance * motor_steps1)))
+#             dest_array2.append(int(round(fractional_distance * motor_steps2)))
+#
+#         sum(dest_array1)
+#         prev_motor1 = 0
+#         prev_motor2 = 0
+#         prev_time = 0
+#
+#         for index in range(0, len(dest_array1)):
+#             move_steps1 = dest_array1[index] - prev_motor1
+#             move_steps2 = dest_array2[index] - prev_motor2
+#             move_time = duration_array[index] - prev_time
+#             prev_time = duration_array[index]
+#
+#             if move_time < 1:
+#                 move_time = 1  # don't allow zero-time moves.
+#
+#             if abs(float(move_steps1) / float(move_time)) < 0.002:
+#                 move_steps1 = 0  # don't allow too-slow movements of this axis
+#             if abs(float(move_steps2) / float(move_time)) < 0.002:
+#                 move_steps2 = 0  # don't allow too-slow movements of this axis
+#
+#             # Don't allow too fast movements of either axis: Catch rounding errors
+#             # that could cause an overspeed event
+#             while ((abs(float(move_steps1) / float(move_time)) >= MaxStepRate)
+#                    or (abs(float(move_steps2) / float(move_time)) >= MaxStepRate)):
+#                 move_time += 1
+#
+#             prev_motor1 += move_steps1
+#             prev_motor2 += move_steps2
+#
+#             if move_steps1 != 0 or move_steps2 != 0:  # if at least one motor step
+#                 # is required for this move.
+#
+#                 motor_dist1_temp = float(move_steps1) / (StepScaleFactor * 2.0)
+#                 motor_dist2_temp = float(move_steps2) / (StepScaleFactor * 2.0)
+#
+#                 # Convert back to find the actual X & Y distances that will be moved:
+#                 # X Distance moved in this subsegment, in inchse
+#                 x_delta = (motor_dist1_temp + motor_dist2_temp)
+#                 # Y Distance moved in this subsegment,
+#                 y_delta = (motor_dist1_temp - motor_dist2_temp)
+#
+#                 f_new_x = f_curr_x + x_delta
+#                 f_new_y = f_curr_y + y_delta
+#                 print_info('Command:', move_steps2, move_steps1, move_time)
+#                 doXYMove(serial_port, move_steps2, move_steps1, move_time)
+#                 if move_time > 50:
+#                     # print('sleep time', float(move_time - 10) / 1000.0)
+#                     time.sleep(float(move_time - 10) / 1000.0)  # pause before issuing next command
+#
+#                 f_curr_x = f_new_x  # Update current position
+#                 f_curr_y = f_new_y
 
 # def move_natural(serial_port, x_dest, y_dest, speed)
 
+# def doCircle(serial_port, theta, speed, radius, direction):
+#     """
+#
+#     :param serial_port:
+#     :param theta:
+#     :param speed:
+#     :param radius:
+#     :param direction:
+#     :return:
+#     """
+#     # distance /= 2.54
+#     speed /= 2.54
+#
+#     delta = math.radians(theta)
+#     factor = radius * math.sin(math.radians(1))
+#
+#     x_dest = factor * math.cos(delta) / 2.54
+#     y_dest = factor * math.sin(delta) / 2.54
+#
+#     # print('x', x_dest)
+#     # print('y', y_dest)
+#     v_i, v_f = 0, 0
+#
+#     # print_info(f'Brushing to {x_dest} with speed {speed}')
+#
+#     f_curr_x, f_curr_y = 0, 0
+#     if direction == "ACW":
+#         x_dest = -x_dest
+#
+#     # """
+#     delta_x_inches = x_dest - f_curr_x
+#     delta_y_inches = y_dest - f_curr_y
+#
+#     # Velocity inputs; clarify units.
+#     vi_inches_per_sec = v_i
+#     vf_inches_per_sec = v_f
+#
+#     # Distance in inches that the motor+belt must turn through at Motor 1 and 2
+#     motor_dist1 = delta_x_inches + delta_y_inches
+#     motor_dist2 = delta_x_inches - delta_y_inches
+#
+#     # resolution = 1 # 16x microstepping
+#     resolution = 2  # 8x microstepping
+#     print_info('Using resolution value of', resolution)
+#
+#     if resolution == 2:
+#         StepScaleFactor = 1016.0
+#         StepScaleFactor = 1016.0
+#     else:
+#         StepScaleFactor = 1016.0 * 2  # Value from variable NativeResFactor in axidraw_conf.py
+#
+#     # Round the requested motion to the nearest motor step.
+#     motor_steps1 = int(round(StepScaleFactor * motor_dist1))
+#     motor_steps2 = int(round(StepScaleFactor * motor_dist2))
+#
+#     # Since we are rounding, we need to keep track of the actual distance moved,
+#     # not just the _requested_ distance to move.
+#
+#     motor_dist1_rounded = float(motor_steps1) / (2.0 * StepScaleFactor)
+#     motor_dist2_rounded = float(motor_steps2) / (2.0 * StepScaleFactor)
+#
+#     # Convert back to find the actual X & Y distances that will be moved:
+#     delta_x_inches_rounded = (motor_dist1_rounded + motor_dist2_rounded)
+#     delta_y_inches_rounded = (motor_dist1_rounded - motor_dist2_rounded)
+#
+#     # If total movement is less than one step, skip this movement.
+#     if abs(motor_steps1) < 1 and abs(motor_steps2) < 1:
+#         print('Total movement less than one step, skipping this movement')
+#
+#     segment_length_inches = distance(delta_x_inches_rounded, delta_y_inches_rounded)
+#
+#     # From axidraw_conf
+#     PenUpSpeed = 100  # Default pen-up speed (%).   Range: 1 - 110 %
+#     PenDownSpeed = 100  # 25 # Default pen-down speed (%). Range: 1 - 110 %
+#     SpeedLimXY_LR = 1  # 12.000 # Maximum XY speed allowed when in Low Resolution
+#     #                        # mode, in inches per second. Default: 12.000 Max:
+#     #                        # 17.3958
+#
+#     SpeedLimXY_HR = 3  # 8.6979 # Maximum XY speed allowed when in High Resolution
+#     #                        # mode, in inches per second. Default: 8.6979, Max:
+#     #                        # 8.6979 Do not increase these values above Max;
+#     #                        # they are derived from MaxStepRate and the
+#     #                        # resolution.
+#     # SpeedLimXY_LR = speed
+#     # SpeedLimXY_HR = speed
+#     # Acceleration & Deceleration rates:
+#     AccelRate = 100  # 40.0    # Standard acceleration rate, inches per second squared
+#     AccelRatePU = 60.0  # Pen-up acceleration rate, inches per second squared
+#     accel = 100  # 50              # Acceleration rate factor (1-100)
+#     TimeSlice = 0.025  # Interval, in seconds, of when to update the
+#     # motors. Default: TimeSlice = 0.025 (25 ms)
+#     MaxStepRate = 24.995  # Maximum allowed motor step rate, in steps per millisecond.
+#
+#     speed_pendown = PenDownSpeed * SpeedLimXY_HR / 110.0  # Speed given as
+#     speed_penup = PenUpSpeed * SpeedLimXY_HR / 110.0  # Speed given as
+#
+#     pen_up = False
+#     if pen_up:
+#         speed_limit = speed_penup
+#     else:
+#         speed_limit = speed_pendown
+#
+#     # Acceleration/deceleration rates:
+#     if pen_up:
+#         accel_rate = AccelRatePU * accel / 100.0
+#     else:
+#         accel_rate = AccelRate * accel / 100.0
+#
+#     # Maximum acceleration time: Time needed to accelerate from full stop to
+#     # maximum speed: v = a * t, so t_max = vMax / a
+#     t_max = speed_limit / accel_rate
+#
+#     # Distance that is required to reach full speed, from zero speed:  x = 1/2 a t^2
+#     accel_dist = 0.5 * accel_rate * t_max * t_max
+#
+#     if vi_inches_per_sec > speed_limit:
+#         vi_inches_per_sec = speed_limit
+#     if vf_inches_per_sec > speed_limit:
+#         vf_inches_per_sec = speed_limit
+#
+#     # Times to reach maximum speed, from our initial velocity
+#     # vMax = vi + a*t  =>  t = (vMax - vi)/a
+#     # vf = vMax - a*t   =>  t = -(vf - vMax)/a = (vMax - vf)/a
+#     # -- These are _maximum_ values. We often do not have enough time/space to reach full speed.
+#
+#     t_accel_max = (speed_limit - vi_inches_per_sec) / accel_rate
+#     t_decel_max = (speed_limit - vf_inches_per_sec) / accel_rate
+#     # Distance that is required to reach full speed, from our start at speed vi_inches_per_sec:
+#     # distance = vi * t + (1/2) a t^2
+#     accel_dist_max = (vi_inches_per_sec * t_accel_max) + (0.5 * accel_rate * t_accel_max * t_accel_max)
+#     # Use the same model for deceleration distance; modeling it with backwards motion:
+#     decel_dist_max = (vf_inches_per_sec * t_decel_max) + (0.5 * accel_rate * t_decel_max * t_decel_max)
+#
+#     # time slices: Slice travel into intervals that are (say) 30 ms long.
+#     time_slice = TimeSlice  # Default slice intervals
+#
+#     # Declare arrays: These are _normally_ 4-byte integers, but could
+#     # (theoretically) be 2-byte integers on some systems.  if so, this could
+#     # cause errors in rare cases (very large/long moves, etc.).  Set up an
+#     # alert system, just in case!
+#
+#     duration_array = array('I')  # unsigned integer for duration -- up to
+#     # 65 seconds for a move if only 2 bytes.
+#     dist_array = array('f')  # float
+#     dest_array1 = array('i')  # signed integer
+#     dest_array2 = array('i')  # signed integer
+#
+#     time_elapsed = 0.0
+#     position = 0.0
+#     velocity = vi_inches_per_sec
+#     speed_max = speed_limit  # We will reach _full cruising speed_!
+#
+#     intervals = int(math.floor(t_accel_max / time_slice))  # Number of intervals during acceleration
+#
+#     # If intervals == 0, then we are already at (or nearly at) full speed.
+#     if intervals > 0:
+#         time_per_interval = t_accel_max / intervals
+#
+#         velocity_step_size = (speed_max - vi_inches_per_sec) / (intervals + 1.0)
+#         # For six time intervals of acceleration, first interval is at velocity (max/7)
+#         # 6th (last) time interval is at 6*max/7
+#         # after this interval, we are at full speed.
+#
+#         for index in range(0, intervals):  # Calculate acceleration phase
+#             velocity += velocity_step_size
+#             time_elapsed += time_per_interval
+#             position += velocity * time_per_interval
+#             duration_array.append(int(round(time_elapsed * 1000.0)))
+#             dist_array.append(position)  # Estimated distance along direction of travel
+#
+#             # Add a center "coasting" speed interval IF there is time for it.
+#         coasting_distance = segment_length_inches - (accel_dist_max + decel_dist_max)
+#
+#         if coasting_distance > (time_slice * speed_max):
+#             # There is enough time for (at least) one interval at full cruising speed.
+#             velocity = speed  # speed_max
+#             cruising_time = coasting_distance / velocity
+#             time_elapsed += cruising_time
+#             duration_array.append(int(round(time_elapsed * 1000.0)))
+#             position += velocity * cruising_time
+#             dist_array.append(position)  # Estimated distance along direction of travel
+#
+#         # Number of intervals during deceleration
+#         intervals = int(math.floor(t_decel_max / time_slice))
+#
+#         time_per_interval = t_decel_max / intervals
+#         velocity_step_size = (speed_max - vf_inches_per_sec) / (intervals + 1.0)
+#
+#         for index in range(0, intervals):  # Calculate deceleration phase
+#             velocity -= velocity_step_size
+#             time_elapsed += time_per_interval
+#             position += velocity * time_per_interval
+#             duration_array.append(int(round(time_elapsed * 1000.0)))
+#             dist_array.append(position)  # Estimated distance along direction of travel
+#
+#         for index in range(0, len(dist_array)):
+#             # Scale our trajectory to the "actual" travel distance that we need:
+#             # Fractional position along the intended path
+#             fractional_distance = dist_array[index] / position
+#             dest_array1.append(int(round(fractional_distance * motor_steps1)))
+#             dest_array2.append(int(round(fractional_distance * motor_steps2)))
+#
+#         sum(dest_array1)
+#         prev_motor1 = 0
+#         prev_motor2 = 0
+#         prev_time = 0
+#
+#         for index in range(0, len(dest_array1)):
+#             move_steps1 = dest_array1[index] - prev_motor1
+#             move_steps2 = dest_array2[index] - prev_motor2
+#             move_time = duration_array[index] - prev_time
+#             prev_time = duration_array[index]
+#
+#             if move_time < 1:
+#                 move_time = 1  # don't allow zero-time moves.
+#
+#             if abs(float(move_steps1) / float(move_time)) < 0.002:
+#                 move_steps1 = 0  # don't allow too-slow movements of this axis
+#             if abs(float(move_steps2) / float(move_time)) < 0.002:
+#                 move_steps2 = 0  # don't allow too-slow movements of this axis
+#
+#             # Don't allow too fast movements of either axis: Catch rounding errors
+#             # that could cause an overspeed event
+#             while ((abs(float(move_steps1) / float(move_time)) >= MaxStepRate)
+#                    or (abs(float(move_steps2) / float(move_time)) >= MaxStepRate)):
+#                 move_time += 1
+#
+#             prev_motor1 += move_steps1
+#             prev_motor2 += move_steps2
+#
+#             if move_steps1 != 0 or move_steps2 != 0:  # if at least one motor step
+#                 # is required for this move.
+#
+#                 motor_dist1_temp = float(move_steps1) / (StepScaleFactor * 2.0)
+#                 motor_dist2_temp = float(move_steps2) / (StepScaleFactor * 2.0)
+#
+#                 # Convert back to find the actual X & Y distances that will be moved:
+#                 # X Distance moved in this subsegment, in inchse
+#                 x_delta = (motor_dist1_temp + motor_dist2_temp)
+#                 # Y Distance moved in this subsegment,
+#                 y_delta = (motor_dist1_temp - motor_dist2_temp)
+#
+#                 f_new_x = f_curr_x + x_delta
+#                 f_new_y = f_curr_y + y_delta
+#
+#                 # ------- new speed ------- #
+#                 # TODO: adjust speed
+#
+#                 lapTime = round(circle_perimeter(radius) / speed)
+#                 new_speed = circle_perimeter(radius) / lapTime
+#                 # print("Time", lapTime/2.54)
+#                 # print("Approx Speed (cm/s)", new_speed * 2.54)
+#
+#                 doXYMove(serial_port, move_steps2, move_steps1, lapTime)
+#
+#                 if move_time > 50:
+#                     # print('sleep time', float(move_time - 10) / 1000.0)
+#                     time.sleep(float(move_time - 10) / 1000.0)  # pause before issuing next command
+#                 f_curr_x = f_new_x  # Update current position
+#                 f_curr_y = f_new_y
+#     # """
 
 
-def doOval(serial_port, theta, speed, radius_x, radius_y):
-    """
+# def move_circular(serial_port, speed, radius, rep, direction):
+#     """
+#
+#     :param serial_port:
+#     :param speed:
+#     :param radius:
+#     :param rep:
+#     :param direction:
+#     :return:
+#     """
+#     n = 0
+#     while n < rep:
+#         k = 0
+#         while k < 360:
+#             doCircle(serial_port, k, speed, radius, direction)
+#             k += 1
+#         n += 1
 
-    :param serial_port:
-    :param theta:
-    :param speed:
-    :param radius_x:
-    :param radius_y:
-    :return:
-    """
-    radius_x = 1.0  # Radius along the x-axis
-    radius_y = 5.0
-    # Convert theta into radians
-    delta = math.radians(theta)
-
-    # Calculate the x and y coordinates for the oval shape
-    x_dest = radius_x * math.cos(delta) / speed
-    y_dest = radius_y * math.sin(delta) / speed
-    print('x', x_dest)
-    print('y', y_dest)
+# def doOval(serial_port, theta, speed, radius_x, radius_y):
+#     """
+#
+#     :param serial_port:
+#     :param theta:
+#     :param speed:
+#     :param radius_x:
+#     :param radius_y:
+#     :return:
+#     """
+#     radius_x = 1.0  # Radius along the x-axis
+#     radius_y = 5.0
+#     # Convert theta into radians
+#     delta = math.radians(theta)
+#
+#     # Calculate the x and y coordinates for the oval shape
+#     x_dest = radius_x * math.cos(delta) / speed
+#     y_dest = radius_y * math.sin(delta) / speed
+#     print('x', x_dest)
+#     print('y', y_dest)
 
 def demoMov(serial_port):
     """
@@ -1021,290 +1571,6 @@ def demoMov(serial_port):
 
 
 """ - Circular Motion - Author: Pablo V. """
-
-
-def doCircle(serial_port, theta, speed, radius, direction):
-    """
-
-    :param serial_port:
-    :param theta:
-    :param speed:
-    :param radius:
-    :param direction:
-    :return:
-    """
-    # distance /= 2.54
-    speed /= 2.54
-
-    delta = math.radians(theta)
-    factor = radius * math.sin(math.radians(1))
-
-    x_dest = factor * math.cos(delta) / 2.54
-    y_dest = factor * math.sin(delta) / 2.54
-
-    # print('x', x_dest)
-    # print('y', y_dest)
-    v_i, v_f = 0, 0
-
-    # print_info(f'Brushing to {x_dest} with speed {speed}')
-
-    f_curr_x, f_curr_y = 0, 0
-    if direction == "ACW":
-        x_dest = -x_dest
-
-    # """
-    delta_x_inches = x_dest - f_curr_x
-    delta_y_inches = y_dest - f_curr_y
-
-    # Velocity inputs; clarify units.
-    vi_inches_per_sec = v_i
-    vf_inches_per_sec = v_f
-
-    # Distance in inches that the motor+belt must turn through at Motor 1 and 2
-    motor_dist1 = delta_x_inches + delta_y_inches
-    motor_dist2 = delta_x_inches - delta_y_inches
-
-    # resolution = 1 # 16x microstepping
-    resolution = 2  # 8x microstepping
-    print_info('Using resolution value of', resolution)
-
-    if resolution == 2:
-        StepScaleFactor = 1016.0
-        StepScaleFactor = 1016.0
-    else:
-        StepScaleFactor = 1016.0 * 2  # Value from variable NativeResFactor in axidraw_conf.py
-
-    # Round the requested motion to the nearest motor step.
-    motor_steps1 = int(round(StepScaleFactor * motor_dist1))
-    motor_steps2 = int(round(StepScaleFactor * motor_dist2))
-
-    # Since we are rounding, we need to keep track of the actual distance moved,
-    # not just the _requested_ distance to move.
-
-    motor_dist1_rounded = float(motor_steps1) / (2.0 * StepScaleFactor)
-    motor_dist2_rounded = float(motor_steps2) / (2.0 * StepScaleFactor)
-
-    # Convert back to find the actual X & Y distances that will be moved:
-    delta_x_inches_rounded = (motor_dist1_rounded + motor_dist2_rounded)
-    delta_y_inches_rounded = (motor_dist1_rounded - motor_dist2_rounded)
-
-    # If total movement is less than one step, skip this movement.
-    if abs(motor_steps1) < 1 and abs(motor_steps2) < 1:
-        print('Total movement less than one step, skipping this movement')
-
-    segment_length_inches = distance(delta_x_inches_rounded, delta_y_inches_rounded)
-
-    # From axidraw_conf
-    PenUpSpeed = 100  # Default pen-up speed (%).   Range: 1 - 110 %
-    PenDownSpeed = 100  # 25 # Default pen-down speed (%). Range: 1 - 110 %
-    SpeedLimXY_LR = 1  # 12.000 # Maximum XY speed allowed when in Low Resolution
-    #                        # mode, in inches per second. Default: 12.000 Max:
-    #                        # 17.3958
-
-    SpeedLimXY_HR = 3  # 8.6979 # Maximum XY speed allowed when in High Resolution
-    #                        # mode, in inches per second. Default: 8.6979, Max:
-    #                        # 8.6979 Do not increase these values above Max;
-    #                        # they are derived from MaxStepRate and the
-    #                        # resolution.
-    # SpeedLimXY_LR = speed
-    # SpeedLimXY_HR = speed
-    # Acceleration & Deceleration rates:
-    AccelRate = 100  # 40.0    # Standard acceleration rate, inches per second squared
-    AccelRatePU = 60.0  # Pen-up acceleration rate, inches per second squared
-    accel = 100  # 50              # Acceleration rate factor (1-100)
-    TimeSlice = 0.025  # Interval, in seconds, of when to update the
-    # motors. Default: TimeSlice = 0.025 (25 ms)
-    MaxStepRate = 24.995  # Maximum allowed motor step rate, in steps per millisecond.
-
-    speed_pendown = PenDownSpeed * SpeedLimXY_HR / 110.0  # Speed given as
-    speed_penup = PenUpSpeed * SpeedLimXY_HR / 110.0  # Speed given as
-
-    pen_up = False
-    if pen_up:
-        speed_limit = speed_penup
-    else:
-        speed_limit = speed_pendown
-
-    # Acceleration/deceleration rates:
-    if pen_up:
-        accel_rate = AccelRatePU * accel / 100.0
-    else:
-        accel_rate = AccelRate * accel / 100.0
-
-    # Maximum acceleration time: Time needed to accelerate from full stop to
-    # maximum speed: v = a * t, so t_max = vMax / a
-    t_max = speed_limit / accel_rate
-
-    # Distance that is required to reach full speed, from zero speed:  x = 1/2 a t^2
-    accel_dist = 0.5 * accel_rate * t_max * t_max
-
-    if vi_inches_per_sec > speed_limit:
-        vi_inches_per_sec = speed_limit
-    if vf_inches_per_sec > speed_limit:
-        vf_inches_per_sec = speed_limit
-
-    # Times to reach maximum speed, from our initial velocity
-    # vMax = vi + a*t  =>  t = (vMax - vi)/a
-    # vf = vMax - a*t   =>  t = -(vf - vMax)/a = (vMax - vf)/a
-    # -- These are _maximum_ values. We often do not have enough time/space to reach full speed.
-
-    t_accel_max = (speed_limit - vi_inches_per_sec) / accel_rate
-    t_decel_max = (speed_limit - vf_inches_per_sec) / accel_rate
-    # Distance that is required to reach full speed, from our start at speed vi_inches_per_sec:
-    # distance = vi * t + (1/2) a t^2
-    accel_dist_max = (vi_inches_per_sec * t_accel_max) + (0.5 * accel_rate * t_accel_max * t_accel_max)
-    # Use the same model for deceleration distance; modeling it with backwards motion:
-    decel_dist_max = (vf_inches_per_sec * t_decel_max) + (0.5 * accel_rate * t_decel_max * t_decel_max)
-
-    # time slices: Slice travel into intervals that are (say) 30 ms long.
-    time_slice = TimeSlice  # Default slice intervals
-
-    # Declare arrays: These are _normally_ 4-byte integers, but could
-    # (theoretically) be 2-byte integers on some systems.  if so, this could
-    # cause errors in rare cases (very large/long moves, etc.).  Set up an
-    # alert system, just in case!
-
-    duration_array = array('I')  # unsigned integer for duration -- up to
-    # 65 seconds for a move if only 2 bytes.
-    dist_array = array('f')  # float
-    dest_array1 = array('i')  # signed integer
-    dest_array2 = array('i')  # signed integer
-
-    time_elapsed = 0.0
-    position = 0.0
-    velocity = vi_inches_per_sec
-    speed_max = speed_limit  # We will reach _full cruising speed_!
-
-    intervals = int(math.floor(t_accel_max / time_slice))  # Number of intervals during acceleration
-
-    # If intervals == 0, then we are already at (or nearly at) full speed.
-    if intervals > 0:
-        time_per_interval = t_accel_max / intervals
-
-        velocity_step_size = (speed_max - vi_inches_per_sec) / (intervals + 1.0)
-        # For six time intervals of acceleration, first interval is at velocity (max/7)
-        # 6th (last) time interval is at 6*max/7
-        # after this interval, we are at full speed.
-
-        for index in range(0, intervals):  # Calculate acceleration phase
-            velocity += velocity_step_size
-            time_elapsed += time_per_interval
-            position += velocity * time_per_interval
-            duration_array.append(int(round(time_elapsed * 1000.0)))
-            dist_array.append(position)  # Estimated distance along direction of travel
-
-            # Add a center "coasting" speed interval IF there is time for it.
-        coasting_distance = segment_length_inches - (accel_dist_max + decel_dist_max)
-
-        if coasting_distance > (time_slice * speed_max):
-            # There is enough time for (at least) one interval at full cruising speed.
-            velocity = speed  # speed_max
-            cruising_time = coasting_distance / velocity
-            time_elapsed += cruising_time
-            duration_array.append(int(round(time_elapsed * 1000.0)))
-            position += velocity * cruising_time
-            dist_array.append(position)  # Estimated distance along direction of travel
-
-        # Number of intervals during deceleration
-        intervals = int(math.floor(t_decel_max / time_slice))
-
-        time_per_interval = t_decel_max / intervals
-        velocity_step_size = (speed_max - vf_inches_per_sec) / (intervals + 1.0)
-
-        for index in range(0, intervals):  # Calculate deceleration phase
-            velocity -= velocity_step_size
-            time_elapsed += time_per_interval
-            position += velocity * time_per_interval
-            duration_array.append(int(round(time_elapsed * 1000.0)))
-            dist_array.append(position)  # Estimated distance along direction of travel
-
-        for index in range(0, len(dist_array)):
-            # Scale our trajectory to the "actual" travel distance that we need:
-            # Fractional position along the intended path
-            fractional_distance = dist_array[index] / position
-            dest_array1.append(int(round(fractional_distance * motor_steps1)))
-            dest_array2.append(int(round(fractional_distance * motor_steps2)))
-
-        sum(dest_array1)
-        prev_motor1 = 0
-        prev_motor2 = 0
-        prev_time = 0
-
-        for index in range(0, len(dest_array1)):
-            move_steps1 = dest_array1[index] - prev_motor1
-            move_steps2 = dest_array2[index] - prev_motor2
-            move_time = duration_array[index] - prev_time
-            prev_time = duration_array[index]
-
-            if move_time < 1:
-                move_time = 1  # don't allow zero-time moves.
-
-            if abs(float(move_steps1) / float(move_time)) < 0.002:
-                move_steps1 = 0  # don't allow too-slow movements of this axis
-            if abs(float(move_steps2) / float(move_time)) < 0.002:
-                move_steps2 = 0  # don't allow too-slow movements of this axis
-
-            # Don't allow too fast movements of either axis: Catch rounding errors
-            # that could cause an overspeed event
-            while ((abs(float(move_steps1) / float(move_time)) >= MaxStepRate)
-                   or (abs(float(move_steps2) / float(move_time)) >= MaxStepRate)):
-                move_time += 1
-
-            prev_motor1 += move_steps1
-            prev_motor2 += move_steps2
-
-            if move_steps1 != 0 or move_steps2 != 0:  # if at least one motor step
-                # is required for this move.
-
-                motor_dist1_temp = float(move_steps1) / (StepScaleFactor * 2.0)
-                motor_dist2_temp = float(move_steps2) / (StepScaleFactor * 2.0)
-
-                # Convert back to find the actual X & Y distances that will be moved:
-                # X Distance moved in this subsegment, in inchse
-                x_delta = (motor_dist1_temp + motor_dist2_temp)
-                # Y Distance moved in this subsegment,
-                y_delta = (motor_dist1_temp - motor_dist2_temp)
-
-                f_new_x = f_curr_x + x_delta
-                f_new_y = f_curr_y + y_delta
-
-                # ------- new speed ------- #
-                # TODO: adjust speed
-
-                lapTime = round(circle_perimeter(radius) / speed)
-                new_speed = circle_perimeter(radius) / lapTime
-                # print("Time", lapTime/2.54)
-                # print("Approx Speed (cm/s)", new_speed * 2.54)
-
-                doXYMove(serial_port, move_steps2, move_steps1, lapTime)
-
-                if move_time > 50:
-                    # print('sleep time', float(move_time - 10) / 1000.0)
-                    time.sleep(float(move_time - 10) / 1000.0)  # pause before issuing next command
-                f_curr_x = f_new_x  # Update current position
-                f_curr_y = f_new_y
-    # """
-
-
-def move_circular(serial_port, speed, radius, rep, direction):
-    """
-
-    :param serial_port:
-    :param speed:
-    :param radius:
-    :param rep:
-    :param direction:
-    :return:
-    """
-    n = 0
-    while n < rep:
-        k = 0
-        while k < 360:
-            doCircle(serial_port, k, speed, radius, direction)
-            k += 1
-        n += 1
-
-
 if __name__ == '__main__':
     Debug_Mode = False
 
