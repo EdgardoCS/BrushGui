@@ -1,0 +1,8 @@
+Path,Linear
+Site,Forearm
+Movement,Left to Right
+Velocity,0.5;5;15
+Distance,10
+Repetitions,2
+VasTime,30
+InterTime,1

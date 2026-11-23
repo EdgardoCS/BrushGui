@@ -686,7 +686,7 @@ class MainUI(QMainWindow):
 
     def progress_fn(self, n):
         self.printToConsole('Trials left: ' + str(n))
-        self.newWindow()
+        # self.newWindow() # <-- HERE CALL VAS WINDOW
 
     def startExperiment(self):
         if self.ConnectButton.isEnabled():

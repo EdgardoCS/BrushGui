@@ -59,7 +59,7 @@ def plot_subject_regression(data: pd.DataFrame, subjects: list[int]):
     plt.title(f"Pleassantness")
     plt.xlabel("Speed (cm/s)")
     plt.ylabel("Rate")
-    plt.xlim([1,22])
+    # plt.xlim([1,22])
     plt.grid(True, linestyle=":", alpha=0.6)
     # plt.xticks([3,10,20])
     # plt.legend()
@@ -68,8 +68,10 @@ def plot_subject_regression(data: pd.DataFrame, subjects: list[int]):
 
 
 # --- Examples ---
-target_subject = 1
+target_subject = 13
 plot_subject_regression(df, [target_subject])
 
 # Multiple subjects together (e.g., 1 and 2):
-# plot_subject_regression(df, [1, 2])
+# plot_subject_regression(df, [7, 8])
+
+## Do results impact on the next one??
